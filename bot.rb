@@ -33,6 +33,7 @@ DB.create_table? :users do
   Integer :discord_id
   String :name
   TrueClass :botmaster
+  TrueClass :enabled
   Time :created
   Time :changed
 end
@@ -80,7 +81,7 @@ end
 
 bot.command(:user) do |event, *args|
   # recht zum aufruf pruefen
-  user = DB[:users].where(discord_id: event.user.id, botmaster: true).first
+  user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
   unless user
     event << "Nur Botmaster dürfen das!"
     return
@@ -122,6 +123,7 @@ bot.command(:user) do |event, *args|
       discord_id: new_user['id'],
       name: new_user['username'],
       botmaster: new_user['botmaster'],
+      enabled: 1,
       created: now,
       changed: now
     )
