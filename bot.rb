@@ -78,6 +78,11 @@ end
 # uptime
 # anzahl von eintraegen
 # datum erster und letzter
+bot.command(:ueber) do |event, *args|
+  event << "v#{config['version']} #{config['website']}"
+  event << "#{DB[:users].count} Benutzer"
+  event << "#{DB[:keywords].count} Einträge"
+end
 
 bot.command(:user) do |event, *args|
   # recht zum aufruf pruefen
