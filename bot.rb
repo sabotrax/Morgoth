@@ -136,9 +136,30 @@ bot.command(:user) do |event, *args|
   # user sperren
   elsif cmd == "--disable"
 
+  # list
   elsif cmd == "--list"
+    en_users = DB[:users].where(enabled: true).order(:name)
+    dis_users = DB[:users].where(enabled: false).order(:name)
 
+    unless en_users.empty?
+      event << "User:"
+      en_users.each do |user|
+	botmaster = user[:botmaster] ? ", Botmaster" : ""
+	event << user[:name] + botmaster
+      end
+    end
+
+    unless dis_users.empty?
+      event << "Inaktive:"
+      dis_users.each do |user|
+	botmaster = user[:botmaster] ? ", Botmaster" : ""
+	event << user[:name] + botmaster
+      end
+    end
+
+  # falsches kommando
   else
+
   end
 
   "ENDE"
