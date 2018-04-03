@@ -61,6 +61,56 @@ end
 
 # merke/definiere --alias
 # ~merke keyword/"mehrere begriffe"[mindestens ein space]definition des begriffs
+bot.command(:merke) do |event, *args|
+  # recht zum aufruf pruefen
+  user = DB[:users].where(discord_id: event.user.id, enabled: true).first
+  unless user
+    event << "Nur Bot-User dürfen das!"
+    return
+  end
+
+  cmd = args.shift if args[0] =~ /^--/
+  arg_string = args.join(' ')
+  # tokenized args
+  targs = arg_string.scan(/(?:\w|"[^"]*")+/)
+
+  if cmd.nil?
+    event << "in standard-merke"
+    keyword = targs.shift
+    if targs.empty?
+      event << "Fehlerhafter Aufruf."
+      return
+    end
+
+    # TODO
+    # keyword suchen und verwenden, wenn schon vorhanden
+    # speichern in transaktion packen
+
+    now = Time.now.to_i
+    idkeyword = DB[:keywords].insert(
+      name: keyword,
+      iduser: user[:id],
+      created: now,
+      changed: now
+    )
+
+    DB[:definitions].insert(
+      definition: targs.join(' '),
+      idkeyword: idkeyword,
+      created: now,
+      changed: now
+    )
+
+  # alias
+  elsif cmd == "--alias"
+    event << "in --alias"
+
+  # falsches kommando
+  else
+    event << "falsches kommando"
+  end
+
+end 
 
 # wasist --ordentlich/-o (sort a-z, sonst nach erstelldatum)
 # ~wasist keyword/"mehrere begriffe"
@@ -134,7 +184,6 @@ bot.command(:user) do |event, *args|
     )
 
     event << "Erledigt."
-    return
 
   # disable
   # gibt es den user, sonst meldung und ende
@@ -167,12 +216,14 @@ bot.command(:user) do |event, *args|
 
   end
 
-  "ENDE"
 end
 
 # undo
 # ~undo
 # ausgabe was rueckgaengig gemacht wurde oder fehler bei zeitueberschreitung
+
+# neueste
+# ausgabe letzte x keywords
 
 def shut_down(b)
   bot = b
