@@ -187,10 +187,21 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte.', usage: '~user ( --add
 
   # add
   if cmd == "--add"
+    # argumente in anfuehrungszeichen gruppieren
+    arg_string = args.join(' ')
+    targs = arg_string.scan(/(?:[-\w]|"[^"]*")+/)
+
+    duser = targs.shift || ""
+    duser.delete! "\""
+    if duser.empty?
+      event << "Fehlerhafter Aufruf."
+      return
+    end
+
     # gibt es den discord-user?
     new_user = {}
     bot.users.each do |u|
-      if u[1].username.downcase == args[0].downcase
+      if u[1].username.downcase == duser.downcase
 	new_user['username'] = u[1].username
 	new_user['id'] = u[1].id
 	break
