@@ -249,7 +249,7 @@ bot.command(:user) do |event, *args|
 
   # falsches kommando
   else
-
+    event << "Unbekanntes Kommando."
   end
 
 end
