@@ -53,15 +53,10 @@ DB.create_table? :definitions do
   Time :changed
 end
 
-bot = Discordrb::Commands::CommandBot.new token: config['bot_token'], client_id: config['bot_client_id'], prefix: config['bot_prefix']
+bot = Discordrb::Commands::CommandBot.new token: config['bot_token'], client_id: config['bot_client_id'], prefix: config['bot_prefix'], help_command: [:hilfe, :help]
 
-bot.command(:test) do |event|  
-  #song = event.message.content.split(' ')[1]
-  "*Ich funktioniere innerhalb definierter Parameter.*"
-end
-
-# merke/definiere --alias
-bot.command(:merke) do |event, *args|
+# merke --alias
+bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ein.', usage: '~merke ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
@@ -131,7 +126,7 @@ bot.command(:merke) do |event, *args|
 end 
 
 # wasist --ordentlich/-o (sort a-z, sonst nach erstelldatum)
-bot.command(:wasist) do |event, *args|
+bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.', usage: '~wasist ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" )') do |event, *args|
   cmd = args.shift if args[0] =~ /^--/
 
   # argumente in anfuehrungszeichen gruppieren
@@ -170,17 +165,17 @@ end
 
 # ueber
 # ~ueber
-# ausgabe von versionsnummer + link zum github
 # uptime
-# anzahl von eintraegen
 # datum erster und letzter
-bot.command(:ueber) do |event, *args|
+bot.command([:ueber, :about], description: 'Nennt Bot-Infos.') do |event, *args|
   event << "v#{config['version']} #{config['website']}"
   event << "#{DB[:users].count} Benutzer"
-  event << "#{DB[:keywords].count} Einträge"
+  event << "#{DB[:keywords].count} Begriffe"
+  event << "#{DB[:definitions].count} Erklärungen"
 end
 
-bot.command(:user) do |event, *args|
+# ~user --botmaster
+bot.command(:user, description: 'Regelt Benutzer-Rechte.', usage: '~user ( --add Discord-User | --disable Discord-User | --list )') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
   unless user
