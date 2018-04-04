@@ -41,6 +41,7 @@ DB.create_table? :keywords do
   primary_key :id
   String :name
   Integer :iduser
+  Integer :alias_id
   Time :created
   Time :changed
 end
@@ -116,7 +117,43 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
   # alias
   elsif cmd == "--alias"
-    event << "In --alias. Nicht implementiert."
+    if targs.size < 2
+      event << "Fehlerhafter Aufruf."
+      return
+    end
+
+    link = targs.shift
+    link.delete! '"'
+    target = targs.shift
+    target.delete! '"'
+
+    # alias darf nicht vorhanden sein
+    link_keyword = DB[:keywords].where(Sequel.ilike(:name, link)).first
+    if link_keyword
+      event << "Alias vorhanden."
+      return
+    end
+    
+    # ziel muss vorhanden sein, aber selbst kein alias
+    target_keyword = DB[:keywords].where(Sequel.ilike(:name, target)).first
+    unless target_keyword
+      event << "Ziel nicht vorhanden."
+      return
+    end
+    if target_keyword[:alias_id]
+      event << "Ziel ist Alias."
+      return
+    end
+
+    DB[:keywords].insert(
+      name: link,
+      iduser: user[:id],
+      alias_id: target_keyword[:id],
+      created: now,
+      changed: now
+    )
+
+    event << "Erledigt."
 
   # unbekanntes kommando
   else
@@ -126,6 +163,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 end 
 
 # wasist --ordentlich/-o (sort a-z, sonst nach erstelldatum)
+# wasist --alles/-a erweiterte ausgabe mit ersteller, datum, aliasen
 bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.', usage: '~wasist ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" )') do |event, *args|
   cmd = args.shift if args[0] =~ /^--/
 
@@ -159,9 +197,6 @@ end
 
 # vergiss
 # ~vergiss keyword/"mehrere begriffe"
-
-# wasisterw
-# wie wasist, aber zusaetzlich mit ersteller und datum
 
 # ueber
 # ~ueber
@@ -239,6 +274,9 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte.', usage: '~user ( --add
 
   # disable
   elsif cmd == "--disable"
+    # TODO
+    # abfrage und leerzeichen wie bei --add
+
     # gibt es den user im bot?
     target_user = DB[:users].where(Sequel.ilike(:name, args[0])).first
     unless target_user
