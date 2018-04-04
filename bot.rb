@@ -61,7 +61,6 @@ bot.command(:test) do |event|
 end
 
 # merke/definiere --alias
-# ~merke keyword/"mehrere begriffe"[mindestens ein space]definition des begriffs
 bot.command(:merke) do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
@@ -71,45 +70,62 @@ bot.command(:merke) do |event, *args|
   end
 
   cmd = args.shift if args[0] =~ /^--/
+
+  # argumente in anfuehrungszeichen gruppieren
   arg_string = args.join(' ')
-  # tokenized args
-  targs = arg_string.scan(/(?:\w|"[^"]*")+/)
+  targs = arg_string.scan(/(?:[-\w]|"[^"]*")+/)
 
   if cmd.nil?
-    event << "in standard-merke"
     keyword = targs.shift
+    keyword.delete! '"'
     if targs.empty?
       event << "Fehlerhafter Aufruf."
       return
     end
 
-    # TODO
-    # keyword suchen und verwenden, wenn schon vorhanden
-    # speichern in transaktion packen
+    # gibt es das keyword schon?
+    old_keyword = DB[:keywords].where(Sequel.ilike(:name, args[0])).first
 
     now = Time.now.to_i
-    idkeyword = DB[:keywords].insert(
-      name: keyword,
-      iduser: user[:id],
-      created: now,
-      changed: now
-    )
+    # neues keyword + eintrag
+    unless old_keyword
+      DB.transaction do
+	idkeyword = DB[:keywords].insert(
+	  name: keyword,
+	  iduser: user[:id],
+	  created: now,
+	  changed: now
+	)
 
-    DB[:definitions].insert(
-      definition: targs.join(' '),
-      iduser: user[:id],
-      idkeyword: idkeyword,
-      created: now,
-      changed: now
-    )
+	DB[:definitions].insert(
+	  definition: targs.join(' '),
+	  iduser: user[:id],
+	  idkeyword: idkeyword,
+	  created: now,
+	  changed: now
+	)
+      end
+
+    # weiterer eintrag zum vorhandenen keyword
+    else
+      DB[:definitions].insert(
+	definition: targs.join(' '),
+	iduser: user[:id],
+	idkeyword: old_keyword[:id],
+	created: now,
+	changed: now
+      )
+    end
+
+    event << "Erledigt."
 
   # alias
   elsif cmd == "--alias"
-    event << "in --alias"
+    event << "In --alias. Nicht implementiert."
 
-  # falsches kommando
+  # unbekanntes kommando
   else
-    event << "falsches kommando"
+    event << "Unbekanntes Kommando."
   end
 
 end 
