@@ -184,7 +184,11 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
     event << "Unbekannt."
     return
   end
-  definition_set = DB[:definitions].where(idkeyword: db_keyword[:id])
+  if db_keyword[:alias_id]
+    definition_set = DB[:definitions].where(idkeyword: db_keyword[:alias_id])
+  else
+    definition_set = DB[:definitions].where(idkeyword: db_keyword[:id])
+  end
 
   event << "**#{db_keyword[:name]}:**"
   i = 0
