@@ -163,6 +163,8 @@ bot.command(:user) do |event, *args|
     end
 
     # gibt es den user schon im bot?
+    # TODO
+    # suche sollte case insesitive sein
     old_user = DB[:users].where(discord_id: new_user['id']).first
     if old_user
       event << "User schon vorhanden."
@@ -188,9 +190,23 @@ bot.command(:user) do |event, *args|
     event << "Erledigt."
 
   # disable
-  # gibt es den user, sonst meldung und ende
-  # user sperren
   elsif cmd == "--disable"
+    # gibt es den user im bot?
+    target_user = DB[:users].where(Sequel.ilike(:name, args[0])).first
+    unless target_user
+      event << "User nicht vorhanden."
+      return
+    end
+
+    # user darf kein botmaster sein
+    if target_user[:botmaster]
+      event << "User darf kein Botmaster sein."
+      return
+    end
+
+    DB[:users].where(id: target_user[:id]).update(enabled: 0)
+
+    event << "Erledigt."
 
   # list
   elsif cmd == "--list"
