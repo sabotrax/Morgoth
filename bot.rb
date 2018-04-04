@@ -131,8 +131,36 @@ bot.command(:merke) do |event, *args|
 end 
 
 # wasist --ordentlich/-o (sort a-z, sonst nach erstelldatum)
-# ~wasist keyword/"mehrere begriffe"
-# ausgabe mit nummern am ende in klammern
+bot.command(:wasist) do |event, *args|
+  cmd = args.shift if args[0] =~ /^--/
+
+  # argumente in anfuehrungszeichen gruppieren
+  arg_string = args.join(' ')
+  targs = arg_string.scan(/(?:[-\w]|"[^"]*")+/)
+
+  keyword = targs.shift || ""
+  keyword.delete! "\""
+  if keyword.empty?
+    event << "Fehlerhafter Aufruf."
+    return
+  end
+
+  # begriff bekannt?
+  db_keyword = DB[:keywords].where(Sequel.ilike(:name, keyword)).first
+  unless db_keyword
+    event << "Unbekannt."
+    return
+  end
+  definition_set = DB[:definitions].where(idkeyword: db_keyword[:id])
+
+  event << "**#{db_keyword[:name]}:**"
+  i = 0
+  definition_set.order(:created).each do |definition|
+    event << "#{definition[:definition]} (#{i += 1})"
+  end
+
+  return
+end
 
 # vergiss
 # ~vergiss keyword/"mehrere begriffe"
