@@ -163,8 +163,6 @@ bot.command(:user) do |event, *args|
     end
 
     # gibt es den user schon im bot?
-    # TODO
-    # suche sollte case insesitive sein
     old_user = DB[:users].where(discord_id: new_user['id']).first
     if old_user
       event << "User schon vorhanden."
@@ -227,6 +225,10 @@ bot.command(:user) do |event, *args|
 	botmaster = user[:botmaster] ? ", Botmaster" : ""
 	event << user[:name] + botmaster
       end
+    end
+
+    if en_users.empty? and dis_users.empty?
+      event << "Keine User."
     end
 
   # falsches kommando
