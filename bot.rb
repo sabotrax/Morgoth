@@ -47,6 +47,7 @@ end
 DB.create_table? :definitions do
   primary_key :id
   String :definition, text: true
+  Integer :iduser
   Integer :idkeyword
   Time :created
   Time :changed
@@ -96,6 +97,7 @@ bot.command(:merke) do |event, *args|
 
     DB[:definitions].insert(
       definition: targs.join(' '),
+      iduser: user[:id],
       idkeyword: idkeyword,
       created: now,
       changed: now
