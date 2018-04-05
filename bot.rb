@@ -211,6 +211,71 @@ end
 
 # vergiss
 # ~vergiss keyword/"mehrere begriffe"
+# falscher aufruf wg leerem argument
+# gibt des den begriff?
+# alle eintraege des begriffs suchen
+# auswahlziffer anwenden
+# gemeinten eintrag zur nachfrage verkuerzt darstellen
+# await dazu, soll zeitlich ablaufen
+# loeschen
+bot.command([:vergiss, :undefine]) do |event, *args|
+  cmd = args.shift if args[0] =~ /^--/
+
+  # argumente in anfuehrungszeichen gruppieren
+  arg_string = args.join(' ')
+  targs = arg_string.scan(/(?:[-\w]|"[^"]*")+/)
+
+  keyword = targs.shift || ""
+  keyword.delete! "\""
+  if keyword.empty?
+    event << "Fehlerhafter Aufruf."
+    return
+  end
+
+  if cmd.nil?
+    # bezeichner des zu loeschenden eintrags vorhanden?
+    if targs[0] !~ /^\d+$/
+      event << "Ziffer nicht vorhanden."
+      return
+    end
+
+    # begriff bekannt?
+    db_keyword = DB[:keywords].where(Sequel.ilike(:name, keyword)).first
+    unless db_keyword
+      event << "Unbekannt."
+      return
+    end
+
+    # alias aufloesen
+    if db_keyword[:alias_id]
+      definition_set = DB[:definitions].where(idkeyword: db_keyword[:alias_id])
+    else
+      definition_set = DB[:definitions].where(idkeyword: db_keyword[:id])
+    end
+
+    i = 0
+    db_definition = {}
+    definition_set.order(:created).each do |definition|
+      i += 1
+      if targs[0].to_i == i
+	p definition
+	db_definition = definition
+	break
+      end
+    end
+    if db_definition.empty?
+      event << "Unbekannte Ziffer."
+      return
+    end
+
+    event << "Ende."
+ 
+  elsif cmd == "--alias"
+
+  else
+  end
+
+end
 
 # ueber
 # ~ueber
