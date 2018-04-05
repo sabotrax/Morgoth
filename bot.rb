@@ -209,16 +209,8 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
   return
 end
 
-# vergiss
-# ~vergiss keyword/"mehrere begriffe"
-# falscher aufruf wg leerem argument
-# gibt des den begriff?
-# alle eintraege des begriffs suchen
-# auswahlziffer anwenden
-# gemeinten eintrag zur nachfrage verkuerzt darstellen
-# await dazu, soll zeitlich ablaufen
-# loeschen
-bot.command([:vergiss, :undefine]) do |event, *args|
+# vergiss --alias
+bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenbank.', usage: '~vergiss ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Klammer-Ziffer aus ~wasist') do |event, *args|
   cmd = args.shift if args[0] =~ /^--/
 
   # argumente in anfuehrungszeichen gruppieren
@@ -253,12 +245,12 @@ bot.command([:vergiss, :undefine]) do |event, *args|
       definition_set = DB[:definitions].where(idkeyword: db_keyword[:id])
     end
 
+    # zu loeschenden eintrag finden
     i = 0
     db_definition = {}
     definition_set.order(:created).each do |definition|
       i += 1
       if targs[0].to_i == i
-	p definition
 	db_definition = definition
 	break
       end
@@ -268,11 +260,40 @@ bot.command([:vergiss, :undefine]) do |event, *args|
       return
     end
 
-    event << "Ende."
- 
+    # zur abfrage darstellen, eventuell verkuerzt
+    token = db_definition[:definition].split(/ /)
+    db_definition[:definition] = token[0] + ' .. ' + token[-1] if token.size > 3
+    event.respond "Eintrag \"#{db_definition[:definition]}\" wirklich löschen? (j/n)"
+
+    # sicherheitsabfrage
+    event.user.await(:wirklich) do |wirklich_event|
+      if wirklich_event.message.content.downcase == "j"
+
+	# nur ein eintrag: keyword, aliase und eintrag loeschen
+	if definition_set.all.size == 1
+	  DB.transaction do
+	    DB[:keywords].where(id: db_definition[:idkeyword]).or(alias_id: db_definition[:idkeyword]).delete
+	    definition_set.delete
+	  end
+
+	# mehrere: eintrag loeschen
+	else
+	  definition_set.where(id: db_definition[:id]).delete
+	end
+
+	wirklich_event.respond "Erledigt."
+      else
+	wirklich_event.respond "Dann nicht."
+      end
+    end
+
+    return
+
   elsif cmd == "--alias"
 
+  # unbekanntes kommando
   else
+    event << "Unbekanntes Kommando."
   end
 
 end
