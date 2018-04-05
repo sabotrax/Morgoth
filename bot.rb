@@ -54,6 +54,11 @@ DB.create_table? :definitions do
   Time :changed
 end
 
+# argumente in anfuehrungszeichen gruppieren
+def tokenize(args)
+  args.join(' ').scan(/(?:"[^"]+"|[^\s]+)/)
+end
+
 bot = Discordrb::Commands::CommandBot.new token: config['bot_token'], client_id: config['bot_client_id'], prefix: config['bot_prefix'], help_command: [:hilfe, :help]
 
 bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ein.', usage: '~merke [ --alias Alias Begriff ] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung') do |event, *args|
@@ -66,9 +71,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
   cmd = args.shift if args[0] =~ /^--/
 
-  # argumente in anfuehrungszeichen gruppieren
-  arg_string = args.join(' ')
-  targs = arg_string.scan(/(?:[-\w]|"[^"]*")+/)
+  targs = tokenize(args)
 
   if cmd.nil?
     keyword = targs.shift
@@ -175,9 +178,7 @@ end
 bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.', usage: '~wasist ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" )') do |event, *args|
   cmd = args.shift if args[0] =~ /^--/
 
-  # argumente in anfuehrungszeichen gruppieren
-  arg_string = args.join(' ')
-  targs = arg_string.scan(/(?:[-\w]|"[^"]*")+/)
+  targs = tokenize(args)
 
   keyword = targs.shift || ""
   keyword.delete! "\""
@@ -211,11 +212,16 @@ end
 
 # vergiss --alias
 bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenbank.', usage: '~vergiss ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Klammer-Ziffer aus ~wasist') do |event, *args|
+  # recht zum aufruf pruefen
+  user = DB[:users].where(discord_id: event.user.id, enabled: true).first
+  unless user
+    event << "Nur Bot-User dürfen das!"
+    return
+  end
+
   cmd = args.shift if args[0] =~ /^--/
 
-  # argumente in anfuehrungszeichen gruppieren
-  arg_string = args.join(' ')
-  targs = arg_string.scan(/(?:[-\w]|"[^"]*")+/)
+  targs = tokenize(args)
 
   keyword = targs.shift || ""
   keyword.delete! "\""
@@ -320,9 +326,7 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte.', usage: '~user ( --add
 
   cmd = args.shift
 
-  # argumente in anfuehrungszeichen gruppieren
-  arg_string = args.join(' ')
-  targs = arg_string.scan(/(?:[-\w]|"[^"]*")+/)
+  targs = tokenize(args)
 
   # add
   if cmd == "--add"
