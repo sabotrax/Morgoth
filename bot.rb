@@ -320,12 +320,12 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte.', usage: '~user ( --add
 
   cmd = args.shift
 
+  # argumente in anfuehrungszeichen gruppieren
+  arg_string = args.join(' ')
+  targs = arg_string.scan(/(?:[-\w]|"[^"]*")+/)
+
   # add
   if cmd == "--add"
-    # argumente in anfuehrungszeichen gruppieren
-    arg_string = args.join(' ')
-    targs = arg_string.scan(/(?:[-\w]|"[^"]*")+/)
-
     duser = targs.shift || ""
     duser.delete! "\""
     if duser.empty?
@@ -374,11 +374,15 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte.', usage: '~user ( --add
 
   # disable
   elsif cmd == "--disable"
-    # TODO
-    # abfrage und leerzeichen wie bei --add
+    duser = targs.shift || ""
+    duser.delete! "\""
+    if duser.empty?
+      event << "Fehlerhafter Aufruf."
+      return
+    end
 
     # gibt es den user im bot?
-    target_user = DB[:users].where(Sequel.ilike(:name, args[0])).first
+    target_user = DB[:users].where(Sequel.ilike(:name, duser)).first
     unless target_user
       event << "User nicht vorhanden."
       return
