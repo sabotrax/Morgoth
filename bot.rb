@@ -56,8 +56,7 @@ end
 
 bot = Discordrb::Commands::CommandBot.new token: config['bot_token'], client_id: config['bot_client_id'], prefix: config['bot_prefix'], help_command: [:hilfe, :help]
 
-# merke --alias
-bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ein.', usage: '~merke ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung') do |event, *args|
+bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ein.', usage: '~merke [ --alias Alias Begriff ] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
@@ -80,7 +79,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     end
 
     # gibt es das keyword schon?
-    old_keyword = DB[:keywords].where(Sequel.ilike(:name, args[0])).first
+    old_keyword = DB[:keywords].where(Sequel.ilike(:name, keyword)).first
 
     now = Time.now.to_i
     # neues keyword + eintrag
@@ -104,10 +103,18 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
     # weiterer eintrag zum vorhandenen keyword
     else
+
+      # unter original speichern
+      if old_keyword[:alias_id]
+	idkeyword = old_keyword[:alias_id]
+      else
+	idkeyword = old_keyword[:id]
+      end
+
       DB[:definitions].insert(
 	definition: targs.join(' '),
 	iduser: user[:id],
-	idkeyword: old_keyword[:id],
+	idkeyword: idkeyword,
 	created: now,
 	changed: now
       )
@@ -137,14 +144,15 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     # ziel muss vorhanden sein, aber selbst kein alias
     target_keyword = DB[:keywords].where(Sequel.ilike(:name, target)).first
     unless target_keyword
-      event << "Ziel nicht vorhanden."
+      event << "Ziel-Begriff nicht vorhanden."
       return
     end
     if target_keyword[:alias_id]
-      event << "Ziel ist Alias."
+      event << "Ziel-Begriff ist Alias."
       return
     end
 
+    now = Time.now.to_i
     DB[:keywords].insert(
       name: link,
       iduser: user[:id],
@@ -184,6 +192,8 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
     event << "Unbekannt."
     return
   end
+
+  # alias aufloesen
   if db_keyword[:alias_id]
     definition_set = DB[:definitions].where(idkeyword: db_keyword[:alias_id])
   else
