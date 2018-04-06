@@ -276,7 +276,7 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
       if wirklich_event.message.content.downcase == "j"
 
 	# nur ein eintrag: keyword, aliase und eintrag loeschen
-	if definition_set.all.size == 1
+	if definition_set.count == 1
 	  DB.transaction do
 	    DB[:keywords].where(id: db_definition[:idkeyword]).or(alias_id: db_definition[:idkeyword]).delete
 	    definition_set.delete
