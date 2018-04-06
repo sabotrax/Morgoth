@@ -440,7 +440,7 @@ end
 
 # neueste --alias - soll aliase zeigen
 bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der Begriffs-Datenbank.', usage: '~neueste') do |event, *args|
-  dataset = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).reverse_order(Sequel[:definitions][:created]).limit(config['show_latest_definitions'].to_i + 50)
+  dataset = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).reverse_order(Sequel[:definitions][:created]).limit(config['show_latest_definitions'] + 50)
 
   event.respond "**Die neuesten Einträge:**"
 
@@ -450,23 +450,27 @@ bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der 
     return
   end
 
+  # doppelte keywords aussortieren
   seen_keywords = []
-  keywords = []
-  i = 0
   dataset.each do |entry|
-    # doppelte keywords aussortieren
+    break if seen_keywords.size == config['show_latest_definitions']
     if seen_keywords.include? entry[:name]
       next
     else
       seen_keywords.push entry[:name]
     end
+  end
 
-    keywords.push entry[:name]
+  # in zeilen zu fuenf ausgeben
+  keywords = []
+  i = 0
+  seen_keywords.each do |keyword|
+    keywords.push keyword
     i += 1
     if i % 5 == 0
       event.respond keywords.join(', ')
       keywords.clear
-    elsif i == dataset.count
+    elsif i == seen_keywords.size
       event.respond keywords.join(', ')
     end
   end
