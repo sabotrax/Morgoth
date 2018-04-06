@@ -107,7 +107,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     # weiterer eintrag zum vorhandenen keyword
     else
 
-      # unter original speichern
+      # alias aufloesen
       if old_keyword[:alias_id]
 	idkeyword = old_keyword[:alias_id]
       else
@@ -438,8 +438,42 @@ end
 # ~undo
 # ausgabe was rueckgaengig gemacht wurde oder fehler bei zeitueberschreitung
 
-# neueste
-# ausgabe letzte x keywords
+# neueste --alias - soll aliase zeigen
+bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der Begriffs-Datenbank.', usage: '~neueste') do |event, *args|
+  dataset = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).reverse_order(Sequel[:definitions][:created]).limit(config['show_latest_definitions'].to_i + 50)
+
+  event.respond "**Die neuesten Einträge:**"
+
+  unless dataset.count > 0
+    event.respond "Keine."
+    event.respond "Das ist ein bisschen traurig."
+    return
+  end
+
+  seen_keywords = []
+  keywords = []
+  i = 0
+  dataset.each do |entry|
+    # doppelte keywords aussortieren
+    if seen_keywords.include? entry[:name]
+      next
+    else
+      seen_keywords.push entry[:name]
+    end
+
+    keywords.push entry[:name]
+    i += 1
+    if i % 5 == 0
+      event.respond keywords.join(', ')
+      keywords.clear
+    elsif i == dataset.count
+      event.respond keywords.join(', ')
+    end
+  end
+
+  return
+
+end
 
 def shut_down(b)
   bot = b
