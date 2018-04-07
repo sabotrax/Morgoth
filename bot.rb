@@ -331,10 +331,13 @@ end
 # Setzt Benutzer inaktiv.
 # Kann nicht auf Botmaster angewandt werden.
 #
+# --botmaster Discord-User
+# Macht Benutzer zum Botmaster.
+#
 # --list
 # Listet Bot-Benutzer auf.
 #
-bot.command(:user, description: 'Regelt Benutzer-Rechte.', usage: '~user ( --add  Discord-User [Botmaster] | --enable Discord-User | --disable Discord-User | --list )') do |event, *args|
+bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Botmaster.', usage: '~user --list | --add  Discord-User [Botmaster] | ( --enable | --disable  | --botmaster Discord-User )') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
   unless user
@@ -423,6 +426,26 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte.', usage: '~user ( --add
     end
 
     DB[:users].where(id: target_user[:id]).update(enabled: enabled)
+
+    event << "Erledigt."
+
+  # botmaster
+  elsif cmd == "--botmaster"
+    duser = targs.shift || ""
+    duser.delete! "\""
+    if duser.empty?
+      event << "Fehlerhafter Aufruf."
+      return
+    end
+
+    # gibt es den user im bot?
+    target_user = DB[:users].where(Sequel.ilike(:name, duser)).first
+    unless target_user
+      event << "User nicht vorhanden."
+      return
+    end
+
+    DB[:users].where(id: target_user[:id]).update(botmaster: true)
 
     event << "Erledigt."
 
