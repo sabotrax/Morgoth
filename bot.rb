@@ -196,12 +196,19 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
 
   # alias aufloesen
   if db_keyword[:alias_id]
+    db_orig_keyword = DB[:keywords].where(id: db_keyword[:alias_id]).first
     definition_set = DB[:definitions].where(idkeyword: db_keyword[:alias_id])
   else
     definition_set = DB[:definitions].where(idkeyword: db_keyword[:id])
   end
 
-  event << "**#{db_keyword[:name]}:**"
+  # bei alias auch original zeigen
+  if db_orig_keyword
+    event << "**#{db_keyword[:name]} (#{db_orig_keyword[:name]}):**"
+  else
+    event << "**#{db_keyword[:name]}:**"
+  end
+
   i = 0
   definition_set.order(:created).each do |definition|
     event << "#{definition[:definition]} (#{i += 1})"
