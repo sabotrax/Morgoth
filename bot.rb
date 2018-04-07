@@ -315,8 +315,26 @@ bot.command([:ueber, :about], description: 'Nennt Bot-Infos.') do |event, *args|
   event << "#{DB[:definitions].count} Erklärungen"
 end
 
-# ~user --botmaster
-bot.command(:user, description: 'Regelt Benutzer-Rechte.', usage: '~user ( --add Discord-User | --disable Discord-User | --list )') do |event, *args|
+# Benutzerverwaltung
+# Nur fuer Botmaster.
+#
+# --add Discord-User [Botmaster]
+# Fuegt Benutzer zum Bot hinzu.
+# "Botmaster" legt Benutzer als Botmaster an.
+#
+# --enable Discord-User
+# Aktiviert Benutzer.
+# Nur aktive Benutzer koennen schreibend auf die Begriffs-DB zugreifen.
+# Standard nach Anlegen.
+#
+# --disable Discord-User
+# Setzt Benutzer inaktiv.
+# Kann nicht auf Botmaster angewandt werden.
+#
+# --list
+# Listet Bot-Benutzer auf.
+#
+bot.command(:user, description: 'Regelt Benutzer-Rechte.', usage: '~user ( --add  Discord-User [Botmaster] | --enable Discord-User | --disable Discord-User | --list )') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
   unless user
@@ -377,7 +395,7 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte.', usage: '~user ( --add
     event << "Erledigt."
 
   # disable
-  elsif cmd == "--disable"
+  elsif cmd =~ /^--(enable|disable)$/
     duser = targs.shift || ""
     duser.delete! "\""
     if duser.empty?
@@ -398,7 +416,13 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte.', usage: '~user ( --add
       return
     end
 
-    DB[:users].where(id: target_user[:id]).update(enabled: 0)
+    if cmd == "--enable"
+      enabled = true
+    else
+      enabled = false
+    end
+
+    DB[:users].where(id: target_user[:id]).update(enabled: enabled)
 
     event << "Erledigt."
 
