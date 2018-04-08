@@ -311,14 +311,14 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
 
 end
 
-# ueber
-# ~ueber
-# uptime
-# datum erster und letzter
+# Bot-Info
+# Jeder.
+#
 bot.command([:ueber, :about], description: 'Nennt Bot-Infos.') do |event, *args|
   event << "v#{config['version']} #{config['website']}"
   event << "#{DB[:users].count} Benutzer"
-  event << "#{DB[:keywords].count} Begriffe"
+  #event << "#{DB[:keywords].where(alias_id: nil).count} Begriffe und #{DB[:keywords].exclude(alias_id: nil, id: 7000).count} Aliase"
+  event << "#{DB[:keywords].where(alias_id: nil).count} Begriffe und #{DB[:keywords].exclude(alias_id: nil).count} Aliase"
   event << "#{DB[:definitions].count} Erklärungen"
 end
 
