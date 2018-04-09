@@ -81,6 +81,14 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       return
     end
 
+    # gibt es die erklaerung schon?
+    definition = targs.join(' ')
+    db_definition = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where(Sequel.ilike(:definition, definition)).first
+    if db_definition
+      event << "Bereits definiert als \"#{db_definition[:name]}\"."
+      return
+    end
+
     # gibt es das keyword schon?
     old_keyword = DB[:keywords].where(Sequel.ilike(:name, keyword)).first
 
