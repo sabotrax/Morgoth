@@ -84,7 +84,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     # hinweis auf mehrfache definitionen
     definition = targs.join(' ')
     db_definition = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where(Sequel.ilike(:definition, definition))
-    if db_definition
+    if db_definition.any?
       keyword_names = []
       db_definition.each do |k|
 	keyword_names.push k[:name]
