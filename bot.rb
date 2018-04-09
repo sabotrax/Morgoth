@@ -81,12 +81,15 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       return
     end
 
-    # gibt es die erklaerung schon?
+    # hinweis auf mehrfache definitionen
     definition = targs.join(' ')
-    db_definition = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where(Sequel.ilike(:definition, definition)).first
+    db_definition = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where(Sequel.ilike(:definition, definition))
     if db_definition
-      event << "Bereits definiert als \"#{db_definition[:name]}\"."
-      return
+      keyword_names = []
+      db_definition.each do |k|
+	keyword_names.push k[:name]
+      end
+      event << "Hinweis: Bereits definiert als #{keyword_names.join(', ')}."
     end
 
     # gibt es das keyword schon?
