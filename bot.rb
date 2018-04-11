@@ -80,7 +80,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
     # hinweis auf mehrfache definitionen
     definition = targs.join(' ')
-    db_definition = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where(Sequel.ilike(:definition, definition))
+    db_definition = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where({Sequel.function(:upper, :definition) => definition.upcase})
     if db_definition.any?
       keyword_names = []
       db_definition.each do |k|
@@ -90,7 +90,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     end
 
     # gibt es das keyword schon?
-    old_keyword = DB[:keywords].where(Sequel.ilike(:name, keyword)).first
+    old_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
 
     now = Time.now.to_i
     # neues keyword + eintrag
@@ -146,14 +146,14 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     target.delete! '"'
 
     # alias darf nicht vorhanden sein
-    link_keyword = DB[:keywords].where(Sequel.ilike(:name, link)).first
+    link_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => link.upcase}).first
     if link_keyword
       event << "Alias vorhanden."
       return
     end
     
     # ziel muss vorhanden sein, aber selbst kein alias
-    target_keyword = DB[:keywords].where(Sequel.ilike(:name, target)).first
+    target_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => target.upcase}).first
     unless target_keyword
       event << "Ziel-Begriff nicht vorhanden."
       return
@@ -181,8 +181,6 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
 end 
 
-# wasist --ordentlich/-o (sort a-z, sonst nach erstelldatum)
-# wasist --alles/-a erweiterte ausgabe mit ersteller, datum, aliasen
 bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.', usage: '~wasist ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" )') do |event, *args|
   cmd = args.shift if args[0] =~ /^--/
 
@@ -195,12 +193,19 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
     return
   end
 
+  # ist vorne oder hinten ein * im suchstring?
+  # ist string mindestens 3 zeichen lang, sonst fehler
+  # * durch % ersetzen und like-suche durchfuehren
+  # else
+
   # begriff bekannt?
-  db_keyword = DB[:keywords].where(Sequel.ilike(:name, keyword)).first
+  db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
   unless db_keyword
     event << "Unbekannt."
     return
   end
+
+  # xx alle alias aufloesen
 
   # alias aufloesen
   if db_keyword[:alias_id]
@@ -253,7 +258,7 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
     end
 
     # begriff bekannt?
-    db_keyword = DB[:keywords].where(Sequel.ilike(:name, keyword)).first
+    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
     unless db_keyword
       event << "Unbekannt."
       return
@@ -422,7 +427,7 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Botmaster.', usage:
     end
 
     # gibt es den user im bot?
-    target_user = DB[:users].where(Sequel.ilike(:name, duser)).first
+    target_user = DB[:users].where({Sequel.function(:upper, :name) => duser.upcase}).first
     unless target_user
       event << "User nicht vorhanden."
       return
@@ -454,7 +459,7 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Botmaster.', usage:
     end
 
     # gibt es den user im bot?
-    target_user = DB[:users].where(Sequel.ilike(:name, duser)).first
+    target_user = DB[:users].where({Sequel.function(:upper, :name) => duser.upcase}).first
     unless target_user
       event << "User nicht vorhanden."
       return
@@ -495,10 +500,6 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Botmaster.', usage:
   end
 
 end
-
-# undo
-# ~undo
-# ausgabe was rueckgaengig gemacht wurde oder fehler bei zeitueberschreitung
 
 # neueste --alias - soll aliase zeigen
 bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der Begriffs-Datenbank.', usage: '~neueste') do |event, *args|
