@@ -24,6 +24,8 @@ require 'discordrb'
 require 'json'
 require 'sequel'
 
+require_relative 'helper'
+
 cfile = File.read('config.json')
 config = JSON.parse(cfile)
 
@@ -52,11 +54,6 @@ DB.create_table? :definitions do
   Integer :idkeyword
   Time :created
   Time :changed
-end
-
-# argumente in anfuehrungszeichen gruppieren
-def tokenize(args)
-  args.join(' ').scan(/(?:"[^"]+"|[^\s]+)/)
 end
 
 bot = Discordrb::Commands::CommandBot.new token: config['bot_token'], client_id: config['bot_client_id'], prefix: config['bot_prefix'], help_command: [:hilfe, :help]
