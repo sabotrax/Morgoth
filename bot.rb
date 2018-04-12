@@ -58,6 +58,15 @@ end
 
 bot = Discordrb::Commands::CommandBot.new token: config['bot_token'], client_id: config['bot_client_id'], prefix: config['bot_prefix'], help_command: [:hilfe, :help]
 
+# Schreibt in die Begriffs-Datenbank.
+# Nur Bot-User.
+#
+# Begriff Erklaerung
+# Speichert Erklaerung unter Begriff.
+#
+# --alias Alias Begriff
+# Legt einen Alias auf einen Begriff an.
+#
 bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ein.', usage: '~merke [ --alias Alias Begriff ] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
@@ -276,7 +285,12 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
 
 end
 
-# vergiss --alias
+# Loescht aus der Begriffs-Datenbank.
+# Nur Bot-User.
+#
+# Begriff Ziffer
+# Löscht Erklaerung unter Angabe der Ziffer aus wasist.
+#
 bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenbank.', usage: '~vergiss ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Klammer-Ziffer aus ~wasist') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
@@ -547,7 +561,9 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Botmaster.', usage:
 
 end
 
-# neueste --alias - soll aliase zeigen
+# Zeigt Begriffe mit neuen Erklaerungen.
+# Jeder.
+#
 bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der Begriffs-Datenbank.', usage: '~neueste') do |event, *args|
   dataset = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).reverse_order(Sequel[:definitions][:created]).limit(config['show_latest_definitions'] + 50)
 
