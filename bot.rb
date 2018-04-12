@@ -181,7 +181,18 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
 end 
 
-bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.', usage: '~wasist ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" )') do |event, *args|
+# Fragt die Begriffs-DB ab.
+# Jeder.
+#
+# Begriff
+# Sucht Definitionen zum Begriff.
+#
+# --bsuche Begriff mit %-Wildcards
+# Fuehrt eine Like-Suche nach Begriffen durch.
+# Der Suchstring kann mit %-Wildcards gebaut werden, z. B. %string, string%, %string%.
+# Standard ist %string%.
+#
+bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.', usage: '~wasist [--bsuche Suchtext-mit-%-Wildcards] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" )') do |event, *args|
   cmd = args.shift if args[0] =~ /^--/
 
   targs = tokenize(args)
@@ -193,41 +204,76 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
     return
   end
 
-  # ist vorne oder hinten ein * im suchstring?
-  # ist string mindestens 3 zeichen lang, sonst fehler
-  # * durch % ersetzen und like-suche durchfuehren
-  # else
+  if cmd.nil?
+    # begriff bekannt?
+    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
+    unless db_keyword
+      event << "Unbekannt."
+      return
+    end
 
-  # begriff bekannt?
-  db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
-  unless db_keyword
-    event << "Unbekannt."
-    return
-  end
+    # alias aufloesen
+    if db_keyword[:alias_id]
+      db_orig_keyword = DB[:keywords].where(id: db_keyword[:alias_id]).first
+      definition_set = DB[:definitions].where(idkeyword: db_keyword[:alias_id])
+    else
+      definition_set = DB[:definitions].where(idkeyword: db_keyword[:id])
+    end
 
-  # xx alle alias aufloesen
+    # bei alias auch original zeigen
+    if db_orig_keyword
+      event << "**#{db_keyword[:name]} (#{db_orig_keyword[:name]}):**"
+    else
+      event << "**#{db_keyword[:name]}:**"
+    end
 
-  # alias aufloesen
-  if db_keyword[:alias_id]
-    db_orig_keyword = DB[:keywords].where(id: db_keyword[:alias_id]).first
-    definition_set = DB[:definitions].where(idkeyword: db_keyword[:alias_id])
+    i = 0
+    definition_set.order(:created).each do |definition|
+      event << "#{definition[:definition]} (#{i += 1})"
+    end
+
+  elsif cmd == "--bsuche"
+    if keyword.length < 3
+      event << "Suchbegriff zu kurz. Drei Zeichen bitte."
+      return
+    elsif keyword !~ /%/
+      keyword = '%' + keyword + '%'
+    end
+
+    # begriff bekannt?
+    db_keywords = DB[:keywords].where(Sequel.ilike(:name, keyword)).order(:name)
+    unless db_keywords.any?
+      event << "Unbekannt."
+      return
+    end
+
+    # ausgabe aufbereiten
+    kw_names = []
+    db_keywords.each do |db_k|
+
+      # aliase aufloesen
+      if db_k[:alias_id]
+	db_orig_keyword = DB[:keywords].where(id: db_k[:alias_id]).first
+
+	# bei alias auch original anzeigen
+	kw_names.push "#{db_k[:name]} (#{db_orig_keyword[:name]})"
+
+      else
+	kw_names.push db_k[:name]
+      end
+
+    end
+
+    # ausgeben
+    formatter(kw_names).each {|line| event.respond line }
+
+  # unbekanntes kommando
   else
-    definition_set = DB[:definitions].where(idkeyword: db_keyword[:id])
-  end
-
-  # bei alias auch original zeigen
-  if db_orig_keyword
-    event << "**#{db_keyword[:name]} (#{db_orig_keyword[:name]}):**"
-  else
-    event << "**#{db_keyword[:name]}:**"
-  end
-
-  i = 0
-  definition_set.order(:created).each do |definition|
-    event << "#{definition[:definition]} (#{i += 1})"
+    event << "Unbekanntes Kommando."
   end
 
   return
+
 end
 
 # vergiss --alias

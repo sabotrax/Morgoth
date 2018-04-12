@@ -24,3 +24,21 @@
 def tokenize(args)
   args.join(' ').scan(/(?:"[^"]+"|[^\s]+)/)
 end
+
+# in zeilen zu fuenf ausgeben
+def formatter(tokens)
+  formatted = []
+  i = 0
+  j = []
+  tokens.each do |token|
+    j.push token
+    i += 1
+    if i % 5 == 0
+      formatted.push j.join(', ')
+      j.clear
+    elsif i == tokens.size
+      formatted.push j.join(', ')
+    end
+  end
+  return formatted
+end
