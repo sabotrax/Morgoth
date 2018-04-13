@@ -593,6 +593,27 @@ bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der 
 
 end
 
+# Wuerfelt mit verschiedenen Wuerfeln.
+# Jeder.
+#
+bot.command([:wuerfeln, :roll], description: '', usage: '') do |event, *args|
+  if args[0] and args[0] !~ /^(\d)(?:(?:d|w)(\d{1,3}))?$/
+    event << "Fehlerhafter Aufruf."
+  end
+  anzahl = $1 || 1
+  seiten = $2 || 6
+
+  erg = []
+  rng = Random.new
+  (1..anzahl.to_i).each do |i|
+    erg.push rng.rand(seiten.to_i) + 1
+  end
+
+  #event.respond << ':game_die:' + erg * ' '
+  event.respond erg * ' '
+end
+
+
 def shut_down(b)
   bot = b
   puts "Auf Wiedersehen!"
