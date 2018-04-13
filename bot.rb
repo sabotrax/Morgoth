@@ -586,19 +586,8 @@ bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der 
     end
   end
 
-  # in zeilen zu fuenf ausgeben
-  keywords = []
-  i = 0
-  seen_keywords.each do |keyword|
-    keywords.push keyword
-    i += 1
-    if i % 5 == 0
-      event.respond keywords.join(', ')
-      keywords.clear
-    elsif i == seen_keywords.size
-      event.respond keywords.join(', ')
-    end
-  end
+  # ausgeben
+  formatter(seen_keywords).each {|line| event.respond line }
 
   return
 
