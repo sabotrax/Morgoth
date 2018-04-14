@@ -390,7 +390,6 @@ end
 bot.command([:ueber, :about], description: 'Nennt Bot-Infos.') do |event, *args|
   event << "v#{config['version']} #{config['website']}"
   event << "#{DB[:users].count} Benutzer"
-  #event << "#{DB[:keywords].where(alias_id: nil).count} Begriffe und #{DB[:keywords].exclude(alias_id: nil, id: 7000).count} Aliase"
   event << "#{DB[:keywords].where(alias_id: nil).count} Begriffe und #{DB[:keywords].exclude(alias_id: nil).count} Aliase"
   event << "#{DB[:definitions].count} Erklärungen"
 end
@@ -596,23 +595,29 @@ end
 # Wuerfelt mit verschiedenen Wuerfeln.
 # Jeder.
 #
-bot.command([:wuerfeln, :roll], description: '', usage: '') do |event, *args|
-  if args[0] and args[0] !~ /^(\d)(?:(?:d|w)(\d{1,3}))?$/
+# Anzahl der Wuerfe mal Seitenzahl.
+# Standard ist 1d6.
+#
+bot.command([:wuerfeln, :roll], description: 'Würfelt bis 9d999.', usage: '~wuerfeln [ 1-9 ( d | w ) 1-999 ]') do |event, *args|
+  args.push '1d6' unless args.any?
+  unless args[0] =~ /^([1-9])(?:(?:d|w)([1-9]\d{,2}))?$/
     event << "Fehlerhafter Aufruf."
+    return
   end
-  anzahl = $1 || 1
+  anzahl = $1.to_i
   seiten = $2 || 6
 
   erg = []
   rng = Random.new
-  (1..anzahl.to_i).each do |i|
+  (1..anzahl).each do |i|
+    erg.push '.' * (rand(6) + 1)
     erg.push rng.rand(seiten.to_i) + 1
   end
 
-  #event.respond << ':game_die:' + erg * ' '
-  event.respond erg * ' '
-end
+  event.respond ':game_die:' + erg * ' '
 
+  return
+end
 
 def shut_down(b)
   bot = b
