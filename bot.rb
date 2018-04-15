@@ -38,12 +38,14 @@ DB.create_table? :users do
   TrueClass :enabled
   Time :created
   Time :changed
+  Time :seen
 end
 DB.create_table? :keywords do
   primary_key :id
   String :name
   Integer :iduser
   Integer :alias_id
+  TrueClass :primer
   Time :created
   Time :changed
 end
@@ -54,6 +56,13 @@ DB.create_table? :definitions do
   Integer :idkeyword
   Time :created
   Time :changed
+end
+DB.create_table? :sightings do
+  primary_key :id
+  Integer :iduser
+  Integer :discord_user_id
+  Integer :discord_server_id
+  Time :seen
 end
 
 bot = Discordrb::Commands::CommandBot.new token: config['bot_token'], client_id: config['bot_client_id'], prefix: config['bot_prefix'], help_command: [:hilfe, :help]
@@ -67,13 +76,18 @@ bot = Discordrb::Commands::CommandBot.new token: config['bot_token'], client_id:
 # --alias Alias Begriff
 # Legt einen Alias auf einen Begriff an.
 #
-bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ein.', usage: '~merke [ --alias Alias Begriff ] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung') do |event, *args|
+# --primer Begriff true|false
+# Fuegt Begriff zur Liste hinzu bzw. entfernt davon, die Benutzern beim ersten Aufruf des Bots angezeigt werden.
+#
+bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ein.', usage: '~merke [ --alias Alias Begriff ] [ --primer Begriff ( true | false ) ] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
     event << "Nur Bot-User dürfen das!"
     return
   end
+
+  seen(event, user)
 
   cmd = args.shift if args[0] =~ /^--/
 
@@ -183,6 +197,37 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
     event << "Erledigt."
 
+  # primer
+  elsif cmd == "--primer"
+    unless user[:botmaster]
+      event.respond 'Nur Bot-Master dürfen das!'
+      return
+    end
+
+    if targs.size < 2 or targs[1] !~ /^(?:true|false)$/i
+      event.respond 'Fehlerhafter Aufruf.'
+      return
+    end
+
+    keyword = targs.shift || ""
+    keyword.delete! "\""
+
+    # begriff bekannt?
+    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
+    unless db_keyword
+      event.respond 'Unbekannt.'
+      return
+    end
+
+    if targs[0].downcase == 'true'
+      action = true
+    else
+      action = false
+    end
+    DB[:keywords].where(id: db_keyword[:id]).update(primer: action)
+
+    event.respond 'Erledigt.'
+
   # unbekanntes kommando
   else
     event << "Unbekanntes Kommando."
@@ -202,6 +247,8 @@ end
 # Standard ist %string%.
 #
 bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.', usage: '~wasist [--bsuche Suchtext-mit-%-Wildcards] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" )') do |event, *args|
+  seen(event)
+
   cmd = args.shift if args[0] =~ /^--/
 
   targs = tokenize(args)
@@ -299,6 +346,8 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
     return
   end
 
+  seen(event, user)
+
   cmd = args.shift if args[0] =~ /^--/
 
   targs = tokenize(args)
@@ -388,6 +437,8 @@ end
 # Jeder.
 #
 bot.command([:ueber, :about], description: 'Nennt Bot-Infos.') do |event, *args|
+  seen(event)
+
   event << "v#{config['version']} #{config['website']}"
   event << "#{DB[:users].count} Benutzer"
   event << "#{DB[:keywords].where(alias_id: nil).count} Begriffe und #{DB[:keywords].exclude(alias_id: nil).count} Aliase"
@@ -423,6 +474,8 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Botmaster.', usage:
     event << "Nur Botmaster dürfen das!"
     return
   end
+
+  seen(event, user)
 
   cmd = args.shift
 
@@ -564,6 +617,8 @@ end
 # Jeder.
 #
 bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der Begriffs-Datenbank.', usage: '~neueste') do |event, *args|
+  seen(event)
+
   dataset = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).reverse_order(Sequel[:definitions][:created]).limit(config['show_latest_definitions'] + 50)
 
   event.respond "**Die neuesten Einträge:**"
@@ -599,6 +654,8 @@ end
 # Standard ist 1d6.
 #
 bot.command([:wuerfeln, :roll], description: 'Würfelt bis 9d999.', usage: '~wuerfeln [ 1-9 ( d | w ) 1-999 ]') do |event, *args|
+  seen(event)
+
   args.push '1d6' unless args.any?
   unless args[0] =~ /^([1-9])(?:(?:d|w)([1-9]\d{,2}))?$/
     event << "Fehlerhafter Aufruf."
