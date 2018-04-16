@@ -43,29 +43,30 @@ def formatter(tokens)
   return formatted
 end
 
-# merkt sich aufrufe
+# Merkt sich Aufrufe
+# Gibt bei Erstkontakt Hinweise und dynamische Keywords aus
+#
 def seen(event, user = nil)
-  db_sighting = DB[:sightings].where(discord_user_id: event.user.id, discord_server_id: event.user.server.id).first
+  db_sighting = DB[:sightings].where(discord_user_id: event.user.id).first
   now = Time.now.to_i
   if db_sighting
-    if user
-      DB[:sightings].where(discord_user_id: event.user.id, discord_server_id: event.user.server.id).update(iduser: user[:id], seen: now)
+    if user and ! db_sighting[:iduser]
+      DB[:sightings].where(discord_user_id: event.user.id).update(iduser: user[:id], seen: now)
     else
-      DB[:sightings].where(discord_user_id: event.user.id, discord_server_id: event.user.server.id).update(seen: now)
+      DB[:sightings].where(discord_user_id: event.user.id).update(seen: now)
     end
   else
     db_keywords = DB[:keywords].where(primer: true).select_map(:name)
     if db_keywords.size > 0
-      event.respond 'Dies scheint dein erster Aufruf zu sein.'
-      event.respond 'Vielleicht möchtest du dir diese Begriffe per **~wasist Begriff** anschauen:'
-      formatter(db_keywords).each {|line| event.respond line }
-      event.respond '-'
+      event.user.pm 'Dies scheint dein erster Aufruf zu sein.'
+      event.user.pm 'Vielleicht möchtest du dir diese Begriffe per **~wasist Begriff** anschauen:'
+      formatter(db_keywords).each {|line| event.user.pm line }
     end
 
     if user
-      DB[:sightings].insert(iduser: user[:id], discord_user_id: event.user.id, discord_server_id: event.user.server.id, seen: now)
+      DB[:sightings].insert(iduser: user[:id], discord_user_id: event.user.id, seen: now)
     else
-      DB[:sightings].insert(discord_user_id: event.user.id, discord_server_id: event.user.server.id, seen: now)
+      DB[:sightings].insert(discord_user_id: event.user.id, seen: now)
     end
   end
 end
