@@ -87,7 +87,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     return
   end
 
-  seen(event, user)
+  #seen(event, user)
 
   cmd = args.shift if args[0] =~ /^--/
 
@@ -247,7 +247,7 @@ end
 # Standard ist %string%.
 #
 bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.', usage: '~wasist [--bsuche Suchtext-mit-%-Wildcards] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" )') do |event, *args|
-  seen(event)
+  #seen(event)
 
   cmd = args.shift if args[0] =~ /^--/
 
@@ -346,7 +346,7 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
     return
   end
 
-  seen(event, user)
+  #seen(event, user)
 
   cmd = args.shift if args[0] =~ /^--/
 
@@ -437,7 +437,7 @@ end
 # Jeder.
 #
 bot.command([:ueber, :about], description: 'Nennt Bot-Infos.') do |event, *args|
-  seen(event)
+  #seen(event)
 
   event << "v#{config['version']} #{config['website']}"
   event << "#{DB[:users].count} Benutzer"
@@ -475,7 +475,7 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Botmaster.', usage:
     return
   end
 
-  seen(event, user)
+  #seen(event, user)
 
   cmd = args.shift
 
@@ -617,7 +617,7 @@ end
 # Jeder.
 #
 bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der Begriffs-Datenbank.', usage: '~neueste') do |event, *args|
-  seen(event)
+  #seen(event)
 
   dataset = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).reverse_order(Sequel[:definitions][:created]).limit(config['show_latest_definitions'] + 50)
 
@@ -654,7 +654,7 @@ end
 # Standard ist 1d6.
 #
 bot.command([:wuerfeln, :roll], description: 'Würfelt bis 9d999.', usage: '~wuerfeln [ 1-9 ( d | w ) 1-999 ]') do |event, *args|
-  seen(event)
+  #seen(event)
 
   args.push '1d6' unless args.any?
   unless args[0] =~ /^([1-9])(?:(?:d|w)([1-9]\d{,2}))?$/
