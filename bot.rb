@@ -218,12 +218,19 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       return
     end
 
+    # alias aufloesen
+    id = db_keyword[:id]
+    if db_keyword[:alias_id]
+      event.respond 'Alias aufgelöst, --primer wird auf Original angewendet.'
+      id = db_keyword[:alias_id]
+    end
+
     if targs[0].downcase == 'true'
       action = true
     else
       action = false
     end
-    DB[:keywords].where(id: db_keyword[:id]).update(primer: action)
+    DB[:keywords].where(id: id).update(primer: action)
 
     event.respond 'Erledigt.'
 
@@ -361,7 +368,7 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
   if cmd.nil?
     # bezeichner des zu loeschenden eintrags vorhanden?
     if targs[0] !~ /^\d+$/
-      event << "Ziffer nicht vorhanden."
+      event << "Ziffer fehlt."
       return
     end
 
