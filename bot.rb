@@ -682,6 +682,20 @@ bot.command([:wuerfeln, :roll], description: 'Würfelt bis 9d999.', usage: '~wue
   return
 end
 
+# Fragt die Datenbank mit einem zufaelligen Begriff ab.
+#
+bot.command([:zufaellig, :random], description: 'Zeigt einen zufälligen Begriff.', usage: '~zufaellig') do |event, *args|
+  seen(event)
+  db_keyword = DB[:keywords].order(Sequel.lit('RANDOM()')).first
+  unless db_keyword
+    event.respond "Es gibt keine Einträge."
+    event.respond "Das ist ein bisschen traurig."
+    return
+  end
+
+  bot.execute_command(:wasist, event, [ db_keyword[:name] ])
+end
+
 def shut_down(b)
   bot = b
   puts "Auf Wiedersehen!"
