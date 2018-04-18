@@ -10,6 +10,7 @@ Features:
 
 * Remember and recall stuff.
 * User management.
+* Greeting new users with configurable keyword/definition pairs.
 * Rolling dice.
 
 ### Documentation

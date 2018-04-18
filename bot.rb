@@ -257,9 +257,8 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
 
   cmd = args.shift if args[0] =~ /^--/
 
-  targs = tokenize(args)
-
-  keyword = targs.shift || ""
+  # tokenize nicht noetig bei abfragen (und macht die benutzung komplizierter)
+  keyword = args.join(' ') || ''
   keyword.delete! "\""
   if keyword.empty?
     event << "Fehlerhafter Aufruf."
@@ -686,6 +685,7 @@ end
 #
 bot.command([:zufaellig, :random], description: 'Zeigt einen zufälligen Begriff.', usage: '~zufaellig') do |event, *args|
   seen(event)
+
   db_keyword = DB[:keywords].order(Sequel.lit('RANDOM()')).first
   unless db_keyword
     event.respond "Es gibt keine Einträge."
