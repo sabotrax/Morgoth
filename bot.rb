@@ -23,8 +23,10 @@
 require 'discordrb'
 require 'json'
 require 'sequel'
+require 'yaml'
 
 require_relative 'helper'
+require_relative 'ship'
 
 cfile = File.read('config.json')
 config = JSON.parse(cfile)
@@ -38,7 +40,6 @@ DB.create_table? :users do
   TrueClass :enabled
   Time :created
   Time :changed
-  Time :seen
 end
 DB.create_table? :keywords do
   primary_key :id
@@ -54,6 +55,12 @@ DB.create_table? :definitions do
   String :definition, text: true
   Integer :iduser
   Integer :idkeyword
+  Time :created
+  Time :changed
+end
+DB.create_table? :templates do
+  Integer :idkeyword, index: true
+  String :object, text: true
   Time :created
   Time :changed
 end
@@ -113,6 +120,13 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
     # gibt es das keyword schon?
     old_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
+
+    # hat das keyword eine zugeordnete vorlage?
+    # falls ja, ist erste wort nach dem keyword ein attribut der vorlage?
+    # falls nein, unten weiter
+    # falls ja, objekt laden und typecheck durchfuehren
+    # nicht ok -> fehlermeldung + ende
+    # ok, dann objekt laden, neuen wert speichern, objekt schreiben
 
     now = Time.now.to_i
     # neues keyword + eintrag
@@ -231,6 +245,91 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       action = false
     end
     DB[:keywords].where(id: id).update(primer: action)
+
+    event.respond 'Erledigt.'
+
+  # template
+  elsif cmd == "--template"
+    if targs.size < 3 or targs[2] !~ /^(?:true|false)$/i
+      event.respond 'Fehlerhafter Aufruf.'
+      return
+    end
+
+    unless targs[1] =~ /^ship$/i
+      event.respond 'Unbekannte Vorlage.'
+      return
+    end
+
+    keyword = targs.shift || ""
+    keyword.delete! "\""
+
+    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
+    if db_keyword and db_keyword[:alias_id]
+      event.respond 'Begriff ist Alias.'
+      return
+    end
+
+    if db_keyword and targs[1].downcase == 'true' and DB[:templates].where(idkeyword: db_keyword[:id]).first
+      event.respond 'Vorlage bereits zugeordnet.'
+      return
+    end
+
+    object = false
+    if targs[0].downcase == 'ship'
+      object = Ship.new
+    end
+    sobject = YAML::dump(object)
+
+    # template anlegen
+    if targs[1].downcase == 'true'
+      now = Time.now.to_i
+
+      # neues keyword + template
+      unless db_keyword
+        DB.transaction do
+	  idkeyword = DB[:keywords].insert(
+	    name: keyword,
+	    iduser: user[:id],
+	    created: now,
+	    changed: now
+	  )
+
+          DB[:templates].insert(
+            idkeyword: idkeyword,
+            object: sobject,
+            created: now,
+            changed: now
+          )
+        end
+
+      # keyword vorhanden, template dazu
+      else
+        DB[:templates].insert(
+          idkeyword: db_keyword[:id],
+          object: sobject,
+          created: now,
+          changed: now
+        )
+      end
+
+    # template loeschen
+    else
+      if db_keyword
+
+        # keyword hat definitionen
+        if DB[:definitions].where(idkeyword: db_keyword[:id]).first
+          DB[:templates].where(idkeyword: db_keyword[:id]).where(Sequel.ilike(:object, "--- !ruby/object:#{targs[0]}%")).delete
+
+        # keyword mit template allein
+        else
+          DB.transaction do
+            DB[:keywords].where(id: db_keyword[:id]).delete
+
+            DB[:templates].where(idkeyword: db_keyword[:id]).where(Sequel.ilike(:object, "--- !ruby/object:#{targs[0]}%")).delete
+          end
+        end
+      end
+    end
 
     event.respond 'Erledigt.'
 
