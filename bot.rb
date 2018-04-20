@@ -387,6 +387,12 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
       event << "**#{db_keyword[:name]}:**"
     end
 
+    template_set = DB[:templates].where(idkeyword: (db_keyword[:alias_id] || db_keyword[:id]))
+    template_set.each do |template|
+      object = YAML::load template[:object]
+      event << object.formatter
+    end
+
     i = 0
     definition_set.order(:created).each do |definition|
       event << "#{definition[:definition]} (#{i += 1})"
