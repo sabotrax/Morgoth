@@ -9,7 +9,7 @@ class Ship
       value:arg[:length] || 0,
       name:   'Länge',
       short_name: 'Länge',
-      type: '^[1-9]\d{1,3}$',
+      type: '^[1-9]\d{,3}(?:(?:,|\.)\d{1,2})?$',
       err_msg:  'Länge in Meter von 1 bis 9999 angeben.',
       source: :local
     }
@@ -18,7 +18,7 @@ class Ship
       value:  arg[:beam] || 0,
       name:   'Breite',
       short_name: 'Breite',
-      type: '^[1-9]\d{1,2}$',
+      type: '^[1-9]\d{,2}(?:(?:,|\.)\d{1,2})?$',
       err_msg:  'Breite in Meter von 1 bis 999 angeben.',
       source: :local
     }
@@ -27,7 +27,7 @@ class Ship
       value:  arg[:height] || 0,
       name:   'Höhe',
       short_name: 'Höhe',
-      type: '^[1-9]\d{1,2}$',
+      type: '^[1-9]\d{,2}(?:(?:,|\.)\d{1,2})?$',
       err_msg:  'Höhe in Meter von 1 bis 999 angeben.',
       source: :local
     }
@@ -36,7 +36,7 @@ class Ship
       value:  arg[:mass] || 0,
       name:   'Masse',
       short_name: 'Masse',
-      type: '^[1-9]\d{1,6}$',
+      type: '^[1-9]\d{,6}(?:(?:,|\.)\d{1,2})?$',
       err_msg:  'Masse in Kilogramm von 1 bis 9999999 angeben.',
       source: :local
     }
@@ -54,11 +54,11 @@ class Ship
     #@missiles
   end
 
-  def length
+  def length?
     @length[:value]
   end
 
-  def length=(l)
+  def length(l)
     unless l.to_s =~ /#{@length[:type]}/
       raise ArgumentError, @length[:err_msg]
     end
@@ -66,11 +66,11 @@ class Ship
     @length[:value] = l
   end
 
-  def beam
+  def beam?
     @beam[:value]
   end
 
-  def beam=(b)
+  def beam(b)
     unless b.to_s =~ /#{@beam[:type]}/
       raise ArgumentError, @beam[:err_msg]
     end
@@ -78,11 +78,11 @@ class Ship
     @beam[:value] = b
   end
 
-  def height
+  def height?
     @height[:value]
   end
 
-  def height=(h)
+  def height(h)
     unless h.to_s =~ /#{@height[:type]}/
       raise ArgumentError, @height[:err_msg]
     end
@@ -90,11 +90,11 @@ class Ship
     @height[:value] = h
   end
 
-  def mass
+  def mass?
     @mass[:value]
   end
 
-  def mass=(m)
+  def mass(m)
     unless m.to_s =~ /#{@mass[:type]}/
       raise ArgumentError, @mass[:err_msg]
     end
@@ -105,9 +105,23 @@ class Ship
   def formatter
     <<~HEREDOC
       *BETA* Schiffsdaten:
-      Länge: #{self.length} m\tBreite: #{self.beam} m\tHöhe: #{self.height} m\tGewicht: #{self.mass} kg
+      Länge: #{self.length?} m\tBreite: #{self.beam?} m\tHöhe: #{self.height?} m\tMasse: #{self.mass?} kg
       Crew mind.: 3\tmax.: 5
     HEREDOC
+  end
+
+  # fuellt schiffsobjekt mit attributen
+  def fill(targs)
+
+    # nach passender variable suchen..
+    self.instance_variables.each do |iv|
+
+      # ..die attribut und wert aufnehmen kann
+      if eval(iv.to_s)[:short_name].downcase == targs[0].downcase
+        method = iv.to_s.tr('@', '')
+        self.send method, targs[1]
+      end
+    end
   end
 
 end

@@ -126,7 +126,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     # falls nein, unten weiter
     # falls ja, objekt laden und typecheck durchfuehren
     # nicht ok -> fehlermeldung + ende
-    # ok, dann objekt laden, neuen wert speichern, objekt schreiben
+    # ok, dann neuen wert speichern, objekt schreiben
 
     now = Time.now.to_i
     # neues keyword + eintrag
@@ -158,13 +158,35 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 	idkeyword = old_keyword[:id]
       end
 
-      DB[:definitions].insert(
-	definition: targs.join(' '),
-	iduser: user[:id],
-	idkeyword: idkeyword,
-	created: now,
-	changed: now
-      )
+      # problem
+      # "merke irgendwas laenge 30" weiss nicht, zu welchem template es gehoert, weil das attribut "laenge" zu mehreren gehoeren koennte, zb schiff und waffe
+      # deswegen vorerst nur EIN template pro keyword
+      db_template = DB[:templates].where(idkeyword: idkeyword).first
+
+      if db_template
+        object = YAML::load db_template[:object]
+
+        # todo
+        # wenn es das attribut nicht gibt, dann normale definition ermoeglichen (error werfen?)
+        begin
+          object.fill targs
+        rescue ArgumentError => e
+          event.respond e.message
+          return
+        end
+
+        sobject = YAML::dump(object)
+        DB[:templates].where(idkeyword: db_template[:idkeyword]).update(object: sobject)
+
+      else
+        DB[:definitions].insert(
+	  definition: targs.join(' '),
+	  iduser: user[:id],
+	  idkeyword: idkeyword,
+	  created: now,
+	  changed: now
+        )
+      end
     end
 
     event << "Erledigt."
@@ -269,6 +291,8 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       return
     end
 
+    # hinweis
+    # nur ein template pro keyword - im gegensatz zu unten
     if db_keyword and targs[1].downcase == 'true' and DB[:templates].where(idkeyword: db_keyword[:id]).first
       event.respond 'Vorlage bereits zugeordnet.'
       return
@@ -313,6 +337,8 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       end
 
     # template loeschen
+    # hinweis
+    # loeschen beachtet verschiedene templates pro keyword, dies wird aber nicht benutzt
     else
       if db_keyword
 
@@ -387,6 +413,8 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
       event << "**#{db_keyword[:name]}:**"
     end
 
+    # hinweis
+    # fuer mehrere templates pro keyword vorbereitet, dies wird aber nicht benutzt
     template_set = DB[:templates].where(idkeyword: (db_keyword[:alias_id] || db_keyword[:id]))
     template_set.each do |template|
       object = YAML::load template[:object]
