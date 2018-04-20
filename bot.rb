@@ -484,6 +484,9 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
       definition_set = DB[:definitions].where(idkeyword: db_keyword[:id])
     end
 
+    # sind diesem begriff templates zugeordnet?
+    db_template = DB[:templates].where(idkeyword: (db_keyword[:alias_id] || db_keyword[:id])).first
+
     # zu loeschenden eintrag finden
     i = 0
     db_definition = {}
@@ -508,8 +511,8 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
     event.user.await(:wirklich) do |wirklich_event|
       if wirklich_event.message.content.downcase == "j"
 
-	# nur ein eintrag: keyword, aliase und eintrag loeschen
-	if definition_set.count == 1
+	# nur ein eintrag und keine templates: keyword, aliase und eintrag loeschen
+	if definition_set.count == 1 and ! db_template
 	  DB.transaction do
 	    DB[:keywords].where(id: db_definition[:idkeyword]).or(alias_id: db_definition[:idkeyword]).delete
 	    definition_set.delete
