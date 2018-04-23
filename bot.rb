@@ -163,22 +163,35 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       # deswegen vorerst nur EIN template pro keyword
       db_template = DB[:templates].where(idkeyword: idkeyword).first
 
+      # wenn ein template zugeordnet ist, dann hat dessen definition vorrang
+      attribute = true
       if db_template
         object = YAML::load db_template[:object]
 
-        # todo
-        # wenn es das attribut nicht gibt, dann normale definition ermoeglichen (error werfen?)
         begin
           object.fill targs
+
+        # falsches/unbekanntes attribut
+        # es koennte aber auch eine normale defintion sein,
+        # deswegen unten weiter
+        rescue TemplateArgumentError => e
+          attribute = false
+
+        # wert des attributs falsch
         rescue ArgumentError => e
           event.respond e.message
           return
         end
 
-        sobject = YAML::dump(object)
-        DB[:templates].where(idkeyword: db_template[:idkeyword]).update(object: sobject)
+        if attribute
+          sobject = YAML::dump(object)
+          DB[:templates].where(idkeyword: db_template[:idkeyword]).update(object: sobject)
+        end
 
-      else
+      end
+
+      # normale definition
+      unless attribute
         DB[:definitions].insert(
 	  definition: targs.join(' '),
 	  iduser: user[:id],

@@ -1,3 +1,25 @@
+#
+# Morgoth
+# A Discord bot for Star Citizen
+
+# Copyright 2018 marcus@dankesuper.de
+
+# This file is part of Morgoth.
+
+# Morgoth is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Morgoth is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Morgoth.  If not, see <http://www.gnu.org/licenses/>.
+#
+
 class Ship
 
   def initialize(arg = {})
@@ -105,8 +127,11 @@ class Ship
   def formatter
     <<~HEREDOC
       *BETA* Schiffsdaten:
+      Größe: Mittel
       Länge: #{self.length?} m\tBreite: #{self.beam?} m\tHöhe: #{self.height?} m\tMasse: #{self.mass?} kg
-      Crew mind.: 3\tmax.: 5
+      Crew mind.: 2\tmax.: 2\tFracht: 46 SCU
+      SCM: 170 m/s\tAB: 1113 m/s
+      Waffen: 4 S3\tTürme: 1 S3\tRaketen: 6 S4\tWerkzeuge: 1
     HEREDOC
   end
 
@@ -114,14 +139,19 @@ class Ship
   def fill(targs)
 
     # nach passender variable suchen..
+    attribute = false
     self.instance_variables.each do |iv|
 
       # ..die attribut und wert aufnehmen kann
       if eval(iv.to_s)[:short_name].downcase == targs[0].downcase
         method = iv.to_s.tr('@', '')
         self.send method, targs[1]
+        attribute = true
       end
+
     end
+
+    raise TemplateArgumentError, 'Eigenschaft unbekannt.' unless attribute
   end
 
 end

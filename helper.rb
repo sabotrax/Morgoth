@@ -70,3 +70,6 @@ def seen(event, user = nil)
     end
   end
 end
+
+class TemplateArgumentError < ArgumentError
+end
