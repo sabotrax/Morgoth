@@ -57,7 +57,7 @@ class Ship
     },
     min_crew: {
       name: 'mind. Crew',
-      short_name: '^(?:mind\.? crew|mindcrew|mindestcrew)$',
+      short_name: '^(?:mind\.? crew|mincrew|mindestcrew)$',
       type: '^[1-9]\d{,2}$',
       err_msg:  'Crew in Personen von 1 bis 999 angeben.',
       source: :local

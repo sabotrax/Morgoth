@@ -47,6 +47,7 @@ DB.create_table? :keywords do
   Integer :iduser
   Integer :alias_id
   TrueClass :primer
+  TrueClass :hidden
   Time :created
   Time :changed
 end
@@ -99,7 +100,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
   targs = tokenize(args)
 
-  if cmd.nil?
+  if cmd.nil? or cmd == '--hidden'
     keyword = targs.shift
     keyword.delete! '"'
     if targs.empty?
@@ -109,7 +110,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
     # hinweis auf mehrfache definitionen
     definition = targs.join(' ')
-    db_definition = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where({Sequel.function(:upper, :definition) => definition.upcase})
+    db_definition = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where({Sequel.function(:upper, :definition) => definition.upcase}).where(hidden: false)
     if db_definition.any?
       keyword_names = []
       db_definition.each do |k|
@@ -120,6 +121,10 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
     # gibt es das keyword schon?
     old_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
+    if old_keyword and cmd == '--hidden'
+      event.respond 'Kann nur neue Einträge verstecken.'
+      return
+    end
 
     # hat das keyword eine zugeordnete vorlage?
     # falls ja, ist erste wort nach dem keyword ein attribut der vorlage?
@@ -135,6 +140,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 	idkeyword = DB[:keywords].insert(
 	  name: keyword,
 	  iduser: user[:id],
+          hidden: cmd == '--hidden' ? true : false,
 	  created: now,
 	  changed: now
 	)
@@ -233,6 +239,10 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       event << "Ziel-Begriff ist Alias."
       return
     end
+    if target_keyword[:hidden]
+      event.respond 'Ziel-Begriff ist versteckt.'
+      return
+    end
 
     now = Time.now.to_i
     DB[:keywords].insert(
@@ -264,6 +274,10 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
     unless db_keyword
       event.respond 'Unbekannt.'
+      return
+    end
+    if db_keyword[:hidden]
+      event.respond 'Begriff ist versteckt.'
       return
     end
 
@@ -448,7 +462,7 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
     end
 
     # begriff bekannt?
-    db_keywords = DB[:keywords].where(Sequel.ilike(:name, keyword)).order(:name)
+    db_keywords = DB[:keywords].where(Sequel.ilike(:name, keyword)).where(hidden: false).order(:name)
     unless db_keywords.any?
       event << "Unbekannt."
       return
@@ -501,7 +515,9 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
 
   cmd = args.shift if args[0] =~ /^--/
 
+  p args
   targs = tokenize(args)
+  p targs
 
   keyword = targs.shift || ""
   keyword.delete! "\""
@@ -518,7 +534,7 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
     end
 
     # begriff bekannt?
-    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
+    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
     unless db_keyword
       event << "Unbekannt."
       return
@@ -773,7 +789,7 @@ end
 bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der Begriffs-Datenbank.', usage: '~neueste') do |event, *args|
   seen(event)
 
-  dataset = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).reverse_order(Sequel[:definitions][:created]).limit(config['show_latest_definitions'] + 50)
+  dataset = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where(hidden: false).reverse_order(Sequel[:definitions][:created]).limit(config['show_latest_definitions'] + 50)
 
   event.respond "**Die neuesten Einträge:**"
 
@@ -835,7 +851,7 @@ end
 bot.command([:zufaellig, :random], description: 'Zeigt einen zufälligen Begriff.', usage: '~zufaellig') do |event, *args|
   seen(event)
 
-  db_keyword = DB[:keywords].order(Sequel.lit('RANDOM()')).first
+  db_keyword = DB[:keywords].where(hidden: false).order(Sequel.lit('RANDOM()')).first
   unless db_keyword
     event.respond "Es gibt keine Einträge."
     event.respond "Das ist ein bisschen traurig."
