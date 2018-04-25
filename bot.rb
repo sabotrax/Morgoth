@@ -191,7 +191,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       end
 
       # normale definition
-      unless attribute
+      unless db_template and attribute
         DB[:definitions].insert(
 	  definition: targs.join(' '),
 	  iduser: user[:id],

@@ -22,58 +22,160 @@
 
 class Ship
 
+  @@config = {
+    length: {
+      name: 'Länge',
+      short_name: '^(?:länge|laenge|lang)$',
+      type: '^[1-9]\d{,3}(?:(?:,|\.)\d{1,2})?$',
+      err_msg:  'Länge in Meter von 1 bis 9999 angeben.'
+    },
+    beam: {
+      name: 'Breite',
+      short_name: '^(?:breite|breit)$',
+      type: '^[1-9]\d{,2}(?:(?:,|\.)\d{1,2})?$',
+      err_msg:  'Breite in Meter von 1 bis 999 angeben.',
+    },
+    height: {
+      name: 'Höhe',
+      short_name: '^(?:höhe|hoehe|hoch)$',
+      type: '^[1-9]\d{,2}(?:(?:,|\.)\d{1,2})?$',
+      err_msg:  'Höhe in Meter von 1 bis 999 angeben.',
+    },
+    mass: {
+      name: 'Masse',
+      short_name: '^(?:masse|gewicht|schwer)$',
+      type: '^[1-9]\d{,6}(?:(?:,|\.)\d{1,2})?$',
+      err_msg:  'Masse in Kilogramm von 1 bis 9999999 angeben.',
+      source: :local
+    },
+    size: {
+      name: 'Größe',
+      short_name: '^(?:größe|groesse|groß)$',
+      type: '^(?:klein|mittel|groß|capital)$',
+      err_msg:  'Größe angeben in Klein, Mittel, Groß oder Capital.',
+      source: :local
+    },
+    min_crew: {
+      name: 'mind. Crew',
+      short_name: '^(?:mind\.? crew|mindcrew|mindestcrew)$',
+      type: '^[1-9]\d{,2}$',
+      err_msg:  'Crew in Personen von 1 bis 999 angeben.',
+      source: :local
+    },
+    cargo: {
+      name: 'Fracht',
+      short_name: '^(?:fracht|cargo)$',
+      type: '^[1-9]\d{,4}$',
+      err_msg:  'Fracht in SCU von 1 bis 99999 angeben.',
+      source: :local
+    },
+    scm_speed: {
+      name: 'SCM',
+      short_name: '^scm$',
+      type: '^[1-9]\d{,2}$',
+      err_msg:  'SCM in ms/s von 1 bis 999 angeben.',
+      source: :local
+    },
+    ab_speed: {
+      name: 'AB',
+      short_name: '^(?:ab|afterburner)$',
+      type: '^[1-9]\d{,3}$',
+      err_msg:  'AB in ms/s von 1 bis 9999 angeben.',
+      source: :local
+    },
+    weapons: {
+      name: 'Waffen',
+      short_name: '^(?:waffen|hardpoints)$',
+      type: '[1-9]\d? S[1-9]\d?(?: (?=\d))?',
+      err_msg:  'Waffen so angeben: "4 S3" oder "2 S3 2 S1".',
+      source: :local
+    },
+    turrets: {
+      name: 'Türme',
+      short_name: '^(?:türme|tuerme|turrets)$',
+      type: '[1-9]\d? S[1-9]\d?(?: (?=\d))?',
+      err_msg:  'Türme so angeben: "4 S3" oder "2 S3 2 S1".',
+      source: :local
+    },
+    missiles: {
+      name: 'Raketen',
+      short_name: '^(?:raketen|missiles)$',
+      type: '[1-9]\d? S[1-9]\d?(?: (?=\d))?',
+      err_msg:  'Raketen so angeben: "4 S3" oder "2 S3 2 S1".',
+      source: :local
+    },
+  }
+
   def initialize(arg = {})
     unless arg.is_a? Hash
       raise ArgumentError, 'Argument is not a Hash'
     end
 
     @length = {
-      value:arg[:length] || 0,
-      name:   'Länge',
-      short_name: 'Länge',
-      type: '^[1-9]\d{,3}(?:(?:,|\.)\d{1,2})?$',
-      err_msg:  'Länge in Meter von 1 bis 9999 angeben.',
-      source: :local
+      value:  arg[:length] || 0,
+      source: arg[:source]&.to_sym || :local
     }
 
     @beam = {
       value:  arg[:beam] || 0,
-      name:   'Breite',
-      short_name: 'Breite',
-      type: '^[1-9]\d{,2}(?:(?:,|\.)\d{1,2})?$',
-      err_msg:  'Breite in Meter von 1 bis 999 angeben.',
-      source: :local
+      source: arg[:source]&.to_sym || :local
     }
 
     @height = {
       value:  arg[:height] || 0,
-      name:   'Höhe',
-      short_name: 'Höhe',
-      type: '^[1-9]\d{,2}(?:(?:,|\.)\d{1,2})?$',
-      err_msg:  'Höhe in Meter von 1 bis 999 angeben.',
-      source: :local
+      source: arg[:source]&.to_sym || :local
     }
 
     @mass = {
       value:  arg[:mass] || 0,
-      name:   'Masse',
-      short_name: 'Masse',
-      type: '^[1-9]\d{,6}(?:(?:,|\.)\d{1,2})?$',
-      err_msg:  'Masse in Kilogramm von 1 bis 9999999 angeben.',
-      source: :local
+      source: arg[:source]&.to_sym || :local
     }
 
-    #@size
+    @size = {
+      value:  arg[:size] || 'Klein',
+      source: arg[:source]&.to_sym || :local
+    }
 
-    #@min_crew
-    #@max_crew
-    #@cargo
-    #@scm_speed
-    #@ab_speed
+    @min_crew = {
+      value:  arg[:min_crew] || 0,
+      source: arg[:source]&.to_sym || :local
+    }
 
-    #@weapons
-    #@turrets
-    #@missiles
+    @max_crew = {
+      value:  arg[:max_crew] || 0,
+      source: arg[:source]&.to_sym || :local
+    }
+
+    @cargo = {
+      value:  arg[:cargo] || 0,
+      source: arg[:source]&.to_sym || :local
+    }
+
+    @scm_speed = {
+      value:  arg[:scm_speed] || 0,
+      source: arg[:source]&.to_sym || :local
+    }
+
+    @ab_speed = {
+      value:  arg[:ab_speed] || 0,
+      source: arg[:source]&.to_sym || :local
+    }
+
+    @weapons = {
+      value:  arg[:weapons] || 0,
+      source: arg[:source]&.to_sym || :local
+    }
+
+    @turrets = {
+      value:  arg[:turrets] || 0,
+      source: arg[:source]&.to_sym || :local
+    }
+
+    @missiles = {
+      value:  arg[:missiles] || 0,
+      source: arg[:source]&.to_sym || :local
+    }
+
   end
 
   def length?
@@ -81,8 +183,8 @@ class Ship
   end
 
   def length(l)
-    unless l.to_s =~ /#{@length[:type]}/
-      raise ArgumentError, @length[:err_msg]
+    unless l.to_s =~ /#{@@config[:length][:type]}/
+      raise ArgumentError, @@config[:length][:err_msg]
     end
 
     @length[:value] = l
@@ -93,8 +195,8 @@ class Ship
   end
 
   def beam(b)
-    unless b.to_s =~ /#{@beam[:type]}/
-      raise ArgumentError, @beam[:err_msg]
+    unless b.to_s =~ /#{@@config[:beam][:type]}/
+      raise ArgumentError, @@config[:beam][:err_msg]
     end
 
     @beam[:value] = b
@@ -105,8 +207,8 @@ class Ship
   end
 
   def height(h)
-    unless h.to_s =~ /#{@height[:type]}/
-      raise ArgumentError, @height[:err_msg]
+    unless h.to_s =~ /#{@@config[:height][:type]}/
+      raise ArgumentError, @@config[:height][:err_msg]
     end
 
     @height[:value] = h
@@ -117,22 +219,130 @@ class Ship
   end
 
   def mass(m)
-    unless m.to_s =~ /#{@mass[:type]}/
-      raise ArgumentError, @mass[:err_msg]
+    unless m.to_s =~ /#{@@config[:mass][:type]}/
+      raise ArgumentError, @@config[:mass][:err_msg]
     end
 
     @mass[:value] = m
   end
 
+  def size?
+    @size[:value]
+  end
+
+  def size(s)
+    unless s.to_s =~ /#{@@config[:size][:type]}/
+      raise ArgumentError, @@config[:size][:err_msg]
+    end
+
+    @size[:value] = s.capitalize
+  end
+
+  def min_crew?
+    @min_crew[:value]
+  end
+
+  def min_crew(c)
+    unless c.to_s =~ /#{@@config[:min_crew][:type]}/
+      raise ArgumentError, @@config[:min_crew][:err_msg]
+    end
+
+    @min_crew[:value] = c
+  end
+
+  def max_crew?
+    @max_crew[:value]
+  end
+
+  def max_crew(c)
+    unless c.to_s =~ /#{@@config[:max_crew][:type]}/
+      raise ArgumentError, @@config[:max_crew][:err_msg]
+    end
+
+    @max_crew[:value] = c
+  end
+
+  def cargo?
+    @cargo[:value]
+  end
+
+  def cargo(c)
+    unless c.to_s =~ /#{@@config[:cargo][:type]}/
+      raise ArgumentError, @@config[:cargo][:err_msg]
+    end
+
+    @cargo[:value] = c
+  end
+
+  def scm_speed?
+    @scm_speed[:value]
+  end
+
+  def scm_speed(s)
+    unless s.to_s =~ /#{@@config[:scm_speed][:type]}/
+      raise ArgumentError, @@config[:scm_speed][:err_msg]
+    end
+
+    @scm_speed[:value] = s
+  end
+
+  def ab_speed?
+    @ab_speed[:value]
+  end
+
+  def ab_speed(s)
+    unless s.to_s =~ /#{@@config[:ab_speed][:type]}/
+      raise ArgumentError, @@config[:ab_speed][:err_msg]
+    end
+
+    @ab_speed[:value] = s
+  end
+
+  def weapons?
+    @weapons[:value]
+  end
+
+  def weapons(w)
+    unless w.to_s =~ /#{@@config[:weapons][:type]}/
+      raise ArgumentError, @@config[:weapons][:err_msg]
+    end
+
+    @weapons[:value] = w
+  end
+
+  def turrets?
+    @turrets[:value]
+  end
+
+  def turrets(t)
+    unless t.to_s =~ /#{@@config[:turrets][:type]}/
+      raise ArgumentError, @@config[:turrets][:err_msg]
+    end
+
+    @turrets[:value] = t
+  end
+
   def formatter
     <<~HEREDOC
       *BETA* Schiffsdaten:
-      Größe: Mittel
+      Größe: #{self.size?}
       Länge: #{self.length?} m\tBreite: #{self.beam?} m\tHöhe: #{self.height?} m\tMasse: #{self.mass?} kg
-      Crew mind.: 2\tmax.: 2\tFracht: 46 SCU
-      SCM: 170 m/s\tAB: 1113 m/s
-      Waffen: 4 S3\tTürme: 1 S3\tRaketen: 6 S4\tWerkzeuge: 1
+      Crew mind.: #{self.min_crew?}\tmax.: #{self.max_crew?}\tFracht: #{self.cargo?} SCU
+      SCM: #{self.scm_speed?} m/s\tAB: #{self.ab_speed?} m/s
+      Waffen: #{self.weapons?}\tTürme: #{self.turrets?}\tRaketen: #{self.missiles?}
     HEREDOC
+  end
+
+  def missiles?
+    @missiles[:value]
+  end
+
+  def missiles(m)
+    unless m.to_s =~ /#{@@config[:missiles][:type]}/
+      raise ArgumentError, @@config[:missiles][:err_msg]
+    end
+
+    @missiles[:value] = m
   end
 
   # fuellt schiffsobjekt mit attributen
@@ -142,10 +352,10 @@ class Ship
     attribute = false
     self.instance_variables.each do |iv|
 
-      # ..die attribut und wert aufnehmen kann
-      if eval(iv.to_s)[:short_name].downcase == targs[0].downcase
-        method = iv.to_s.tr('@', '')
-        self.send method, targs[1]
+      iv_literal = iv.to_s.tr('@', '')
+      targs.each {|token| token.delete! '"'}
+      if @@config.has_key?(iv_literal.to_sym) and targs[0] =~ /#{@@config[iv_literal.to_sym][:short_name]}/i
+        self.send iv_literal, targs[1]
         attribute = true
       end
 
