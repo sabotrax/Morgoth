@@ -62,6 +62,13 @@ class Ship
       err_msg:  'Crew in Personen von 1 bis 999 angeben.',
       source: :local
     },
+    max_crew: {
+      name: 'max. Crew',
+      short_name: '^(?:max\.? crew|maxcrew|maximalcrew)$',
+      type: '^[1-9]\d{,2}$',
+      err_msg:  'Crew in Personen von 1 bis 999 angeben.',
+      source: :local
+    },
     cargo: {
       name: 'Fracht',
       short_name: '^(?:fracht|cargo)$',
@@ -322,17 +329,6 @@ class Ship
     @turrets[:value] = t
   end
 
-  def formatter
-    <<~HEREDOC
-      *BETA* Schiffsdaten:
-      Größe: #{self.size?}
-      Länge: #{self.length?} m\tBreite: #{self.beam?} m\tHöhe: #{self.height?} m\tMasse: #{self.mass?} kg
-      Crew mind.: #{self.min_crew?}\tmax.: #{self.max_crew?}\tFracht: #{self.cargo?} SCU
-      SCM: #{self.scm_speed?} m/s\tAB: #{self.ab_speed?} m/s
-      Waffen: #{self.weapons?}\tTürme: #{self.turrets?}\tRaketen: #{self.missiles?}
-    HEREDOC
-  end
-
   def missiles?
     @missiles[:value]
   end
@@ -343,6 +339,17 @@ class Ship
     end
 
     @missiles[:value] = m
+  end
+
+  def formatter
+    <<~HEREDOC
+      *BETA* Schiffsdaten:
+      Größe: #{self.size?}
+      Länge: #{self.length?} m\tBreite: #{self.beam?} m\tHöhe: #{self.height?} m\tMasse: #{self.mass?} kg
+      Crew mind.: #{self.min_crew?}\tmax.: #{self.max_crew?}\tFracht: #{self.cargo?} SCU
+      SCM: #{self.scm_speed?} m/s\tAB: #{self.ab_speed?} m/s
+      Waffen: #{self.weapons?}\tTürme: #{self.turrets?}\tRaketen: #{self.missiles?}
+    HEREDOC
   end
 
   # fuellt schiffsobjekt mit attributen
