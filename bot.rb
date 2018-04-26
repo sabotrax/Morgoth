@@ -83,10 +83,14 @@ bot = Discordrb::Commands::CommandBot.new token: config['bot_token'], client_id:
 # --alias Alias Begriff
 # Legt einen Alias auf einen Begriff an.
 #
+# --hidden
+# Legt einen versteckten Eintrag an.
+# Dieser wird nicht gefunden von ~neueste, ~zufaellig, --bsuche, ~ueber.
+#
 # --primer Begriff true|false
 # Fuegt Begriff zur Liste hinzu bzw. entfernt davon, die Benutzern beim ersten Aufruf des Bots angezeigt werden.
 #
-bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ein.', usage: '~merke [ --alias Alias Begriff ] [ --primer Begriff ( true | false ) ] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung') do |event, *args|
+bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ein.', usage: '~merke [ --alias Alias Begriff ] [ --hidden ] [ --primer Begriff ( true | false ) ] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
@@ -606,8 +610,8 @@ bot.command([:ueber, :about], description: 'Nennt Bot-Infos.') do |event, *args|
 
   event << "v#{config['version']} #{config['website']}"
   event << "#{DB[:users].count} Benutzer"
-  event << "#{DB[:keywords].where(alias_id: nil).count} Begriffe und #{DB[:keywords].exclude(alias_id: nil).count} Aliase"
-  event << "#{DB[:definitions].count} Erklärungen"
+  event << "#{DB[:keywords].where(alias_id: nil, hidden: false).count} Begriffe und #{DB[:keywords].where(hidden: false).exclude(alias_id: nil).count} Aliase"
+  event << "#{DB[:definitions].join(:keywords, :id => :idkeyword).where(hidden: false).count} Erklärungen"
 end
 
 # Benutzerverwaltung
@@ -843,7 +847,7 @@ end
 
 # Fragt die Datenbank mit einem zufaelligen Begriff ab.
 #
-bot.command([:zufaellig, :random], description: 'Zeigt einen zufälligen Begriff.', usage: '~zufaellig') do |event, *args|
+bot.command([:zufaellig, :random, :rnd], description: 'Zeigt einen zufälligen Begriff.', usage: '~zufaellig') do |event, *args|
   seen(event)
 
   db_keyword = DB[:keywords].where(hidden: false).order(Sequel.lit('RANDOM()')).first
