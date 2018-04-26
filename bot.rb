@@ -225,7 +225,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     # alias darf nicht vorhanden sein
     link_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => link.upcase}).first
     if link_keyword
-      event << "Alias vorhanden."
+      event << "Alias bereits vorhanden."
       return
     end
     
@@ -236,7 +236,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       return
     end
     if target_keyword[:alias_id]
-      event << "Ziel-Begriff ist Alias."
+      event << "Ziel-Begriff ist Alias, aber muss Begriff sein."
       return
     end
 
@@ -274,14 +274,14 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       return
     end
     if db_keyword[:hidden]
-      event.respond 'Begriff ist versteckt.'
+      event.respond 'Begriff darf nicht versteckt sein.'
       return
     end
 
     # alias aufloesen
     id = db_keyword[:id]
     if db_keyword[:alias_id]
-      event.respond 'Alias aufgelöst, --primer wird auf Original angewendet.'
+      event.respond 'Hinweis: Alias aufgelöst, --primer wird auf Original angewendet.'
       id = db_keyword[:alias_id]
     end
 
@@ -311,7 +311,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
     db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
     if db_keyword and db_keyword[:alias_id]
-      event.respond 'Begriff ist Alias.'
+      event.respond 'Begriff ist Alias, aber muss Begriff sein.'
       return
     end
 
