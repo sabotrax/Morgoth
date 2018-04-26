@@ -239,16 +239,13 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       event << "Ziel-Begriff ist Alias."
       return
     end
-    if target_keyword[:hidden]
-      event.respond 'Ziel-Begriff ist versteckt.'
-      return
-    end
 
     now = Time.now.to_i
     DB[:keywords].insert(
       name: link,
       iduser: user[:id],
       alias_id: target_keyword[:id],
+      hidden: target_keyword[:hidden] == true ? true : false,
       created: now,
       changed: now
     )
@@ -515,9 +512,7 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
 
   cmd = args.shift if args[0] =~ /^--/
 
-  p args
   targs = tokenize(args)
-  p targs
 
   keyword = targs.shift || ""
   keyword.delete! "\""
