@@ -526,12 +526,6 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
   end
 
   if cmd.nil?
-    # bezeichner des zu loeschenden eintrags vorhanden?
-    if targs[0] !~ /^\d+$/
-      event << "Ziffer fehlt."
-      return
-    end
-
     # begriff bekannt?
     db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
     unless db_keyword
@@ -544,6 +538,17 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
       definition_set = DB[:definitions].where(idkeyword: db_keyword[:alias_id])
     else
       definition_set = DB[:definitions].where(idkeyword: db_keyword[:id])
+    end
+
+    # bezeichner des zu loeschenden eintrags vorhanden?
+    if targs[0] !~ /^\d+$/
+      # nur noetig, wenn mehr als ein eintrag vorhanden ist
+      if definition_set.count > 1
+        event << "Ziffer fehlt."
+        return
+      else
+        targs[0] = 1
+      end
     end
 
     # sind diesem begriff templates zugeordnet?
