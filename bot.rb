@@ -400,12 +400,15 @@ end
 # Begriff
 # Sucht Definitionen zum Begriff.
 #
+# --alles/--verbose
+# Zeigt zusaetzlich Ersteller und Datum fuer Begriff, Alias und Definition an.
+#
 # --bsuche Begriff mit %-Wildcards
 # Fuehrt eine Like-Suche nach Begriffen durch.
 # Der Suchstring kann mit %-Wildcards gebaut werden, z. B. %string, string%, %string%.
 # Standard ist %string%.
 #
-bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.', usage: '~wasist [--bsuche Suchtext-mit-%-Wildcards] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" )') do |event, *args|
+bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.', usage: '~wasist [ --alles | --bsuche Suchtext-mit-%-Wildcards ] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" )') do |event, *args|
   seen(event)
 
   cmd = args.shift if args[0] =~ /^--/
@@ -418,9 +421,13 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
     return
   end
 
-  if cmd.nil?
+  if cmd.nil? or cmd == '--alles' or cmd == '--verbose'
     # begriff bekannt?
-    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
+    if cmd.nil?
+      db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
+    else
+      db_keyword = DB.fetch('SELECT `keywords`.*, `users`.`name` AS \'username\' FROM `keywords` INNER JOIN `users` ON (`users`.`id` = `keywords`.`iduser`) WHERE (UPPER(`keywords`.`name`) = ?)', keyword.upcase).first
+    end
     unless db_keyword
       event << "Unbekannt."
       return
@@ -428,17 +435,44 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
 
     # alias aufloesen
     if db_keyword[:alias_id]
-      db_orig_keyword = DB[:keywords].where(id: db_keyword[:alias_id]).first
-      definition_set = DB[:definitions].where(idkeyword: db_keyword[:alias_id])
+      if cmd.nil?
+        db_orig_keyword = DB[:keywords].where(id: db_keyword[:alias_id]).first
+        definition_set = DB[:definitions].where(idkeyword: db_keyword[:alias_id])
+      else
+        db_orig_keyword = DB.fetch('SELECT `keywords`.*, `users`.`name` AS \'username\' FROM `keywords` INNER JOIN `users` ON (`users`.`id` = `keywords`.`iduser`) WHERE (`keywords`.`id` = ?)', db_keyword[:alias_id]).first
+        definition_set = DB.fetch('SELECT `definitions`.*, `users`.`name` AS \'username\' FROM `definitions` INNER JOIN `users` on (`users`.`id` = `definitions`.`iduser`) WHERE (`definitions`.`idkeyword` = ?)', db_keyword[:alias_id])
+      end
     else
-      definition_set = DB[:definitions].where(idkeyword: db_keyword[:id])
+      if cmd.nil?
+        definition_set = DB[:definitions].where(idkeyword: db_keyword[:id])
+      else
+        definition_set = DB.fetch('SELECT `definitions`.*, `users`.`name` AS \'username\' FROM `definitions` INNER JOIN `users` on (`users`.`id` = `definitions`.`iduser`) WHERE (`definitions`.`idkeyword` = ?)', db_keyword[:id])
+      end
     end
 
     # bei alias auch original zeigen
     if db_orig_keyword
-      event << "**#{db_keyword[:name]} (#{db_orig_keyword[:name]}):**"
+      if cmd.nil?
+        event << "**#{db_keyword[:name]} (#{db_orig_keyword[:name]}):**"
+      else
+        created = Time.at(db_orig_keyword[:created].to_i)
+        event << "**#{db_keyword[:name]} (#{db_orig_keyword[:name]})** #{db_orig_keyword[:username]} #{created.strftime('%H:%M %d.%m.%y')}:"
+      end
     else
-      event << "**#{db_keyword[:name]}:**"
+      if cmd.nil?
+        event << "**#{db_keyword[:name]}:**"
+      else
+        created = Time.at(db_keyword[:created].to_i)
+        event << "**#{db_keyword[:name]}** #{db_keyword[:username]} #{created.strftime('%H:%M %d.%m.%y')}:"
+      end
+    end
+
+    # aliase fuer --alles holen
+    alias_set = DB.fetch('SELECT `keywords`.*, `users`.`name` AS \'username\' FROM `keywords` INNER JOIN `users` ON (`users`.`id` = `keywords`.`iduser`) WHERE (`keywords`.`alias_id` = ?)', db_keyword[:alias_id] ? db_keyword[:alias_id] : db_keyword[:id]).map{|row| "#{row[:name]} (#{row[:username]} #{Time.at(row[:created].to_i).strftime('%H:%M %d.%m.%y')})" }
+    if cmd and alias_set.any?
+      event << 'Alias(e):'
+      formatter(alias_set).each {|line| event << line }
+      event << 'Erläuterung(en):'
     end
 
     # hinweis
@@ -450,8 +484,15 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
     end
 
     i = 0
-    definition_set.order(:created).each do |definition|
-      event << "#{definition[:definition]} (#{i += 1})"
+    if cmd.nil?
+      definition_set.order(:created).each do |definition|
+        event << "#{definition[:definition]} (#{i += 1})"
+      end
+    else
+      definition_set.order(:created).each do |definition|
+        created = Time.at(definition[:created].to_i)
+        event << "#{definition[:definition]} (#{definition[:username]} #{created.strftime('%H:%M %d.%m.%y')}) (#{i += 1})"
+      end
     end
 
   elsif cmd == "--bsuche"

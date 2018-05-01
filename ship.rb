@@ -343,7 +343,7 @@ class Ship
 
   def formatter
     <<~HEREDOC
-      *BETA* Schiffsdaten:
+      Schiffsdaten:
       Größe: #{self.size?}
       Länge: #{self.length?} m\tBreite: #{self.beam?} m\tHöhe: #{self.height?} m\tMasse: #{self.mass?} kg
       Crew mind.: #{self.min_crew?}\tmax.: #{self.max_crew?}\tFracht: #{self.cargo?} SCU
