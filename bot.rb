@@ -28,6 +28,7 @@ require 'rufus/scheduler'
 require 'adsf'
 require 'securerandom'
 require 'zlib'
+require 'net/http'
 
 require_relative 'helper'
 require_relative 'ship'
@@ -950,6 +951,15 @@ bot.command([:datenbank, :database, :db], description: 'Datenbank-Verwaltung. Nu
   targs = tokenize(args)
 
   if cmd == '--export'
+    uri = URI("http://#{config['dl_hostname']}:#{config['dl_host_port']}")
+    begin
+      res = Net::HTTP.get_response(uri)
+    rescue
+    else
+      event.respond 'Das geht gerade nicht. Bitte warte 60 Sekunden.'
+      return
+    end
+
     # datei bereitstellen
     filename = 'bot-' + SecureRandom.urlsafe_base64(10) + '.db'
     FileUtils.cp 'db/bot.db', "public/#{filename}"
