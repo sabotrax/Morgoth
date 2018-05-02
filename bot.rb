@@ -684,11 +684,11 @@ bot.command([:ueber, :about], description: 'Nennt Bot-Infos.') do |event, *args|
 end
 
 # Benutzerverwaltung
-# Nur fuer Botmaster.
+# Nur fuer Bot-Master.
 #
 # --add Discord-User [Botmaster]
 # Fuegt Benutzer zum Bot hinzu.
-# "Botmaster" legt Benutzer als Botmaster an.
+# "Botmaster" legt Benutzer als Bot-Master an.
 #
 # --enable Discord-User
 # Aktiviert Benutzer.
@@ -697,19 +697,19 @@ end
 #
 # --disable Discord-User
 # Setzt Benutzer inaktiv.
-# Kann nicht auf Botmaster angewandt werden.
+# Kann nicht auf Bot-Master angewandt werden.
 #
 # --botmaster Discord-User
-# Macht Benutzer zum Botmaster.
+# Macht Benutzer zum Bot-Master.
 #
 # --list
 # Listet Bot-Benutzer auf.
 #
-bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Botmaster.', usage: '~user --list | --add  Discord-User [Botmaster] | ( --enable | --disable  | --botmaster Discord-User )') do |event, *args|
+bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage: '~user --list | --add  Discord-User [Botmaster] | ( --enable | --disable  | --botmaster Discord-User )') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
   unless user
-    event << "Nur Botmaster dürfen das!"
+    event << "Nur Bot-Master dürfen das!"
     return
   end
 
@@ -785,7 +785,7 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Botmaster.', usage:
 
     # user darf kein botmaster sein
     if target_user[:botmaster]
-      event << "User darf kein Botmaster sein."
+      event << "User darf kein Bot-Master sein."
       return
     end
 
@@ -939,7 +939,7 @@ bot.command([:datenbank, :database, :db], description: 'Datenbank-Verwaltung. Nu
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
   unless user
-    event << "Nur Botmaster dürfen das!"
+    event << "Nur Bot-Master dürfen das!"
     return
   end
 
@@ -962,7 +962,7 @@ bot.command([:datenbank, :database, :db], description: 'Datenbank-Verwaltung. Nu
     # webserver
     server = Adsf::Server.new(host: '0.0.0.0', root: 'public')
 
-    event.respond "Datenbank für 60 s verfügbar http://#{config['dl_hostname']}:#{config['dl_host_port']}/#{zfilename}"
+    event.respond "SQLite-Datenbank für 60 s verfügbar http://#{config['dl_hostname']}:#{config['dl_host_port']}/#{zfilename}"
 
     # timer
     scheduler = Rufus::Scheduler.new
