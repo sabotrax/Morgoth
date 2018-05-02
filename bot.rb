@@ -545,6 +545,9 @@ end
 # Begriff Ziffer
 # Löscht Erklaerung unter Angabe der Ziffer aus wasist.
 #
+# --alias Begriff
+# Löscht Alias.
+#
 bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenbank.', usage: '~vergiss ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Klammer-Ziffer aus ~wasist') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
@@ -640,6 +643,22 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
     return
 
   elsif cmd == "--alias"
+    # begriff bekannt?
+    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
+    unless db_keyword
+      event << "Unbekannt."
+      return
+    end
+
+    # begriff muss alias sein
+    unless db_keyword[:alias_id]
+      event << 'Kein Alias.'
+      return
+    end
+
+    DB[:keywords].where(id: db_keyword[:id]).delete
+
+    event.respond 'Erledigt.'
 
   # unbekanntes kommando
   else
