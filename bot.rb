@@ -24,6 +24,10 @@ require 'discordrb'
 require 'json'
 require 'sequel'
 require 'yaml'
+require 'rufus/scheduler'
+require 'adsf'
+require 'securerandom'
+require 'zlib'
 
 require_relative 'helper'
 require_relative 'ship'
@@ -923,6 +927,58 @@ bot.command([:zufaellig, :random, :rnd], description: 'Zeigt einen zufälligen B
   end
 
   bot.execute_command(:wasist, event, [ db_keyword[:name] ])
+end
+
+# Datenbank-Verwaltung
+# Nur Bot-Master.
+#
+# --export
+# Stellt die Datenbank zeitlich begrenzt zum Download bereit.
+#
+bot.command([:datenbank, :database, :db], description: 'Datenbank-Verwaltung. Nur Bot-Master.', usage: '~datenbank --export') do |event, *args|
+  # recht zum aufruf pruefen
+  user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
+  unless user
+    event << "Nur Botmaster dürfen das!"
+    return
+  end
+
+  seen(event, user)
+
+  cmd = args.shift
+
+  targs = tokenize(args)
+
+  if cmd == '--export'
+    # datei bereitstellen
+    filename = 'bot-' + SecureRandom.urlsafe_base64(10) + '.db'
+    FileUtils.cp 'db/bot.db', "public/#{filename}"
+    zfilename = filename + '.gz'
+    Zlib::GzipWriter.open("public/#{zfilename}") do |gz|
+      gz.write IO.binread("public/#{filename}")
+    end
+    FileUtils.rm "public/#{filename}"
+
+    # webserver
+    server = Adsf::Server.new(host: '0.0.0.0', root: 'public')
+
+    event.respond "Datenbank für 60 s verfügbar http://#{config['dl_hostname']}:#{config['dl_host_port']}/#{zfilename}"
+
+    # timer
+    scheduler = Rufus::Scheduler.new
+    scheduler.in '60s' do
+      server.stop
+      FileUtils.rm "public/#{zfilename}"
+    end
+
+    server.run
+    scheduler.join
+
+  # falsches kommando
+  else
+    event << "Unbekanntes Kommando."
+  end
+
 end
 
 def shut_down(b)
