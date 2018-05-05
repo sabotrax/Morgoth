@@ -119,7 +119,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
     # hinweis auf mehrfache definitionen
     definition = targs.join(' ')
-    db_definition = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where({Sequel.function(:upper, :definition) => definition.upcase}).where(hidden: false)
+    db_definition = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where({Sequel.function(:upper, :definition) => Sequel.function(:upper, definition)}).where(hidden: false)
     if db_definition.any?
       keyword_names = []
       db_definition.each do |k|
@@ -129,7 +129,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     end
 
     # gibt es das keyword schon?
-    old_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
+    old_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
     if old_keyword and cmd == '--hidden'
       event.respond 'Kann nur neue Einträge verstecken.'
       return
@@ -232,14 +232,14 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     target.delete! '"'
 
     # alias darf nicht vorhanden sein
-    link_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => link.upcase}).first
+    link_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, link)}).first
     if link_keyword
       event << "Alias bereits vorhanden."
       return
     end
     
     # ziel muss vorhanden sein, aber selbst kein alias
-    target_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => target.upcase}).first
+    target_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, target)}).first
     unless target_keyword
       event << "Ziel-Begriff nicht vorhanden."
       return
@@ -277,7 +277,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     keyword.delete! "\""
 
     # begriff bekannt?
-    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
+    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
     unless db_keyword
       event.respond 'Unbekannt.'
       return
@@ -318,7 +318,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     keyword = targs.shift || ""
     keyword.delete! "\""
 
-    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
+    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
     if db_keyword and db_keyword[:alias_id]
       event.respond 'Begriff ist Alias, aber muss Begriff sein.'
       return
@@ -429,7 +429,7 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
   if cmd.nil? or cmd == '--alles' or cmd == '--verbose'
     # begriff bekannt?
     if cmd.nil?
-      db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
+      db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
     else
       db_keyword = DB.fetch('SELECT `keywords`.*, `users`.`name` AS \'username\' FROM `keywords` INNER JOIN `users` ON (`users`.`id` = `keywords`.`iduser`) WHERE (UPPER(`keywords`.`name`) = ?)', keyword.upcase).first
     end
@@ -778,7 +778,7 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
     end
 
     # gibt es den user im bot?
-    target_user = DB[:users].where({Sequel.function(:upper, :name) => duser.upcase}).first
+    target_user = DB[:users].where({Sequel.function(:upper, :name) => Sequel.function(:upper, duser)}).first
     unless target_user
       event << "User nicht vorhanden."
       return
@@ -810,7 +810,7 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
     end
 
     # gibt es den user im bot?
-    target_user = DB[:users].where({Sequel.function(:upper, :name) => duser.upcase}).first
+    target_user = DB[:users].where({Sequel.function(:upper, :name) => Sequel.function(:upper, duser)}).first
     unless target_user
       event << "User nicht vorhanden."
       return
