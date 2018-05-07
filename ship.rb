@@ -101,14 +101,14 @@ class Ship
       name: 'Türme',
       short_name: '^(?:türme|tuerme|turrets)$',
       type: '[1-9]\d? (?:S|s)[1-9]\d?(?: (?:à|a|je|je zu|zu je) [1-9]\d?)?',
-      err_msg:  'Türme so angeben: "4 S3" oder "2 S3 2 S1".',
+      err_msg:  'Türme so angeben: "4 S3", "5 S2 à 2" oder "2 S3 2 S1".',
       source: :local
     },
     missiles: {
       name: 'Raketen',
       short_name: '^(?:raketen|torpedos|missiles)$',
-      type: '[1-9]\d? S[1-9]\d?(?: (?=\d))?',
-      err_msg:  'Raketen so angeben: "4 S3" oder "2 S3 2 S1".',
+      type: '[1-9]\d? (?:S|s)[1-9]\d?(?: (?:à|a|je|je zu|zu je) [1-9]\d?)?',
+      err_msg:  'Raketen so angeben: "4 S3", "3 S3 à 8" oder "2 S3 2 S1".',
       source: :local
     },
   }
@@ -341,9 +341,16 @@ class Ship
   end
 
   def missiles(m)
-    unless m.to_s =~ /#{@@config[:missiles][:type]}/
-      raise ArgumentError, @@config[:missiles][:err_msg]
+    mgroups = m.split(/(#{@@config[:missiles][:type]})/)
+    mgroups.each do |g|
+      next if g.to_s =~ /^(\s|\t)?$/
+      unless g.to_s =~ /#{@@config[:missiles][:type]}/
+        raise ArgumentError, @@config[:missiles][:err_msg]
+      end
     end
+
+    m.tr!('s', 'S')
+    m.gsub!(/(à|a|je zu|zu je|je)/, 'à')
 
     @missiles[:value] = m
   end
