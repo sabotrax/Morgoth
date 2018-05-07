@@ -100,7 +100,7 @@ class Ship
     turrets: {
       name: 'Türme',
       short_name: '^(?:türme|tuerme|turrets)$',
-      type: '[1-9]\d? S[1-9]\d?(?: (?=\d))?',
+      type: '[1-9]\d? (?:S|s)[1-9]\d?(?: (?:à|a|je|je zu|zu je) [1-9]\d?)?',
       err_msg:  'Türme so angeben: "4 S3" oder "2 S3 2 S1".',
       source: :local
     },
@@ -322,9 +322,16 @@ class Ship
   end
 
   def turrets(t)
-    unless t.to_s =~ /#{@@config[:turrets][:type]}/
-      raise ArgumentError, @@config[:turrets][:err_msg]
+    tgroups = t.split(/(#{@@config[:turrets][:type]})/)
+    tgroups.each do |g|
+      next if g.to_s =~ /^(\s|\t)?$/
+      unless g.to_s =~ /#{@@config[:turrets][:type]}/
+        raise ArgumentError, @@config[:turrets][:err_msg]
+      end
     end
+
+    t.tr!('s', 'S')
+    t.gsub!(/(à|a|je zu|zu je|je)/, 'à')
 
     @turrets[:value] = t
   end
@@ -362,6 +369,7 @@ class Ship
       iv_literal = iv.to_s.tr('@', '')
       targs.each {|token| token.delete! '"'}
       if @@config.has_key?(iv_literal.to_sym) and targs[0] =~ /#{@@config[iv_literal.to_sym][:short_name]}/i
+        raise ArgumentError, 'Fehlerhafter Aufruf.' unless targs[1]
         self.send iv_literal, targs[1]
         attribute = true
       end
