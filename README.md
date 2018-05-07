@@ -38,6 +38,22 @@ SYNOPSIS
 
 ~define [ --alias alias keyword ] [ --hidden ] [ --primer keyword ( true | false ) ] ( keyword | other-keyword | "just another keyword" ) text
 
+DESCRIPTION
+
+Only one long option is allowed at a time.
+
+--alias
+
+  Creates an alias to the keyword
+
+--hidden
+
+  Creates a hidden keyword. Hidden keywords are not shown anywhere. One has to know the keyword to display them. Keywords can only be hidden at their creation
+
+--primer
+
+  Makes a keyword a primer. Primer factoids are shown when a user talks to the bot the first time. Useful for FAQs.
+
 TBD.
 
 ### Getting things up and running for development
