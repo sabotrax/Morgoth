@@ -51,7 +51,7 @@ class Ship
     size: {
       name: 'Größe',
       short_name: '^(?:größe|groesse|groß)$',
-      type: '^(?:klein|mittel|groß|capital)$',
+      type: '^(?:klein|mittel|(:?G|g)roß|capital)$',
       err_msg:  'Größe angeben in Klein, Mittel, Groß oder Capital.',
       source: :local
     },
@@ -106,7 +106,7 @@ class Ship
     },
     missiles: {
       name: 'Raketen',
-      short_name: '^(?:raketen|missiles)$',
+      short_name: '^(?:raketen|torpedos|missiles)$',
       type: '[1-9]\d? S[1-9]\d?(?: (?=\d))?',
       err_msg:  'Raketen so angeben: "4 S3" oder "2 S3 2 S1".',
       source: :local

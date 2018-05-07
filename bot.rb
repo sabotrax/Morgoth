@@ -347,6 +347,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 	  idkeyword = DB[:keywords].insert(
 	    name: keyword,
 	    iduser: user[:id],
+            hidden: false,
 	    created: now,
 	    changed: now
 	  )
@@ -858,11 +859,14 @@ end
 bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der Begriffs-Datenbank.', usage: '~neueste') do |event, *args|
   seen(event)
 
-  dataset = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where(hidden: false).reverse_order(Sequel[:definitions][:created]).limit(config['show_latest_definitions'] + 50)
+  definition_set = DB[:keywords].select(:name, Sequel[:definitions][:created]).join(:definitions, :idkeyword => :id).where(hidden: false).reverse_order(Sequel[:definitions][:created]).limit(config['show_latest'] + 50)
+  template_set = DB[:keywords].select(:name, Sequel[:templates][:created]).join(:templates, :idkeyword => :id).where(hidden: false).reverse_order(Sequel[:templates][:created]).limit(config['show_latest'] + 50)
+  dataset = definition_set.all + template_set.all
+  sdataset = dataset.sort_by {|row| row[:created]}.reverse
 
   event.respond "**Die neuesten Einträge:**"
 
-  unless dataset.count > 0
+  unless sdataset.count > 0
     event.respond "Keine."
     event.respond "Das ist ein bisschen traurig."
     return
@@ -870,8 +874,8 @@ bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der 
 
   # doppelte keywords aussortieren
   seen_keywords = []
-  dataset.each do |entry|
-    break if seen_keywords.size == config['show_latest_definitions']
+  sdataset.each do |entry|
+    break if seen_keywords.size == config['show_latest']
     if seen_keywords.include? entry[:name]
       next
     else
