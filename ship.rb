@@ -51,7 +51,7 @@ class Ship
     size: {
       name: 'Größe',
       short_name: '^(?:größe|groesse|groß)$',
-      type: '^(?:klein|mittel|(:?G|g)roß|capital)$',
+      type: '^(?:(?:K|k)lein|(?:M|m)ittel|(:?G|g)roß|(?:C|c)apital)$',
       err_msg:  'Größe angeben in Klein, Mittel, Groß oder Capital.',
       source: :local
     },
@@ -109,6 +109,13 @@ class Ship
       short_name: '^(?:raketen|torpedos|missiles)$',
       type: '[1-9]\d? (?:S|s)[1-9]\d?(?: (?:à|a|je|je zu|zu je) [1-9]\d?)?',
       err_msg:  'Raketen so angeben: "4 S3", "3 S3 à 8" oder "2 S3 2 S1".',
+      source: :local
+    },
+    utility_items: {
+      name: 'Werkzeugplätze',
+      short_name: '^(?:werkzeuge|utily items)$',
+      type: '[1-9]\d? S[1-9]\d?(?: (?=\d))?',
+      err_msg:  'Werkzeuge so angeben: "4 S3" oder "2 S3 2 S1".',
       source: :local
     },
   }
@@ -180,6 +187,11 @@ class Ship
 
     @missiles = {
       value:  arg[:missiles] || 0,
+      source: arg[:source]&.to_sym || :local
+    }
+
+    @utility_items = {
+      value:  arg[:utility_items] || 0,
       source: arg[:source]&.to_sym || :local
     }
 
@@ -355,6 +367,18 @@ class Ship
     @missiles[:value] = m
   end
 
+  def utility_items?
+    @utility_items[:value]
+  end
+
+  def utility_items(i)
+    unless i.to_s =~ /#{@@config[:utility_items][:type]}/
+      raise ArgumentError, @@config[:utility_items][:err_msg]
+    end
+
+    @utility_items[:value] = i
+  end
+
   def formatter
     <<~HEREDOC
       Schiffsdaten:
@@ -362,7 +386,7 @@ class Ship
       Länge: #{self.length?} m\tBreite: #{self.beam?} m\tHöhe: #{self.height?} m\tMasse: #{self.mass?} kg
       Crew mind.: #{self.min_crew?}\tmax.: #{self.max_crew?}\tFracht: #{self.cargo?} SCU
       SCM: #{self.scm_speed?} m/s\tAB: #{self.ab_speed?} m/s
-      Waffen: #{self.weapons?}\tTürme: #{self.turrets?}\tRaketen: #{self.missiles?}
+      Waffen: #{self.weapons?}\tTürme: #{self.turrets?}\tRaketen: #{self.missiles?}\tWerkzeugplätze: #{self.utility_items?}
     HEREDOC
   end
 
