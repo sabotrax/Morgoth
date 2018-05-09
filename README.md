@@ -18,13 +18,11 @@ Features:
 
 Overview:
 
-The bot's primary job is to store and display factoids.
+The bot's primary job is to store and display factoids. A factoid is made up of a keyword and some text.
 
-A factoid is made up of a keyword and some text.
+Everybody on the Discord server can execute non-writing bot commands, like asking the bot about stuff.
 
-Everybody on the Discord can execute non-writing bot commands.
-
-Only users known to the bot can execute writing commands.
+Only users known to the bot can execute writing commands, like adding new stuff or creating aliases.
 
 Users known as bot masters can elevate others.
 
@@ -42,17 +40,11 @@ DESCRIPTION
 
 Only one long option is allowed at a time.
 
---alias
+--alias - Creates an alias to the keyword
 
-  Creates an alias to the keyword
+--hidden - Creates a hidden keyword. Hidden keywords are not shown anywhere. One has to know the keyword to display them. Keywords can only be hidden at their creation
 
---hidden
-
-  Creates a hidden keyword. Hidden keywords are not shown anywhere. One has to know the keyword to display them. Keywords can only be hidden at their creation
-
---primer
-
-  Makes a keyword a primer. Primer factoids are shown when a user talks to the bot the first time. Useful for FAQs.
+--primer - Makes a keyword a primer. Primer factoids are shown when a user talks to the bot the first time. Useful for FAQs.
 
 TBD.
 
@@ -77,6 +69,13 @@ TBD.
 ### Installing production-ready
 
 TBD.
+
+### Caveats
+
+The first bot master has to be created manually in the SQL database.
+In your SQLite client do `insert into users (discord_id, name, botmaster, enabled, created, changed) values (DISCORD_ID, 'DISCORD_NAME_W/O_THE_#_PART', 1, 1, UNIX_TIMESTAMP, UNIX_TIMESTAMP)`.
+
+Check with `~user --list`.
 
 ### Remark
 I tend to mix English and German language throughout the project.
