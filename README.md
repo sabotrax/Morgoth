@@ -46,6 +46,22 @@ Only one long option is allowed at a time.
 
 --primer - Makes a keyword a primer. Primer factoids are shown when a user talks to the bot the first time. Useful for FAQs.
 
+NAME
+
+~whatis - display factiods
+
+SYNOPSIS
+
+~whatis [ --verbose | --ksearch search-string-with-%-wildcards ] ( keyword | other-keyword | "just another keyword" )
+
+DESCRIPTION
+
+Only one long option is allowed at a time.
+
+--verbose - Display also creating user and creation time.
+
+--ksearch - Search for keywords. %-wildcards are implicit, so 'string' is '%string%', but '%string' or 'string%' are different.
+
 TBD.
 
 ### Getting things up and running for development
@@ -71,11 +87,13 @@ TBD.
 TBD.
 
 ### Caveats
-
+    
 The first bot master has to be created manually in the SQL database.
 In your SQLite client do `insert into users (discord_id, name, botmaster, enabled, created, changed) values (DISCORD_ID, 'DISCORD_NAME_W/O_THE_#_PART', 1, 1, UNIX_TIMESTAMP, UNIX_TIMESTAMP)`.
 
 Check with `~user --list`.
+
+The bot is not beeing translated yet and is only talking German.
 
 ### Remark
 I tend to mix English and German language throughout the project.
