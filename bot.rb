@@ -409,7 +409,7 @@ end
 # --alles/--verbose
 # Zeigt zusaetzlich Ersteller und Datum fuer Begriff, Alias und Definition an.
 #
-# --bsuche Begriff mit %-Wildcards
+# --bsuche/--ksearch Begriff mit %-Wildcards
 # Fuehrt eine Like-Suche nach Begriffen durch.
 # Der Suchstring kann mit %-Wildcards gebaut werden, z. B. %string, string%, %string%.
 # Standard ist %string%.
@@ -501,7 +501,7 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
       end
     end
 
-  elsif cmd == "--bsuche"
+  elsif cmd == "--bsuche" or cmd == "--ksearch"
     if keyword.length < 3
       event << "Suchbegriff zu kurz. Drei Zeichen bitte."
       return
