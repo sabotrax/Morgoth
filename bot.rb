@@ -1032,6 +1032,40 @@ bot.command([:datenbank, :database, :db], description: 'Datenbank-Verwaltung. Nu
 
 end
 
+# Zeigt alle Hashtags.
+# Jeder.
+#
+bot.command([:tagszeigen, :showtags], description: 'Zeigt alle Hashtags.', usage: '~tagszeigen') do |event, *args|
+  seen(event)
+
+  definition_set = DB[:definitions].where(Sequel.ilike(:definition, '%#%')).map(:definition)
+
+  event.respond "**Alle Hashtags:**"
+
+  unless definition_set.any?
+    event.respond "Keine."
+    event.respond "Das ist ein bisschen traurig."
+    return
+  end
+
+  seen_tags = []
+  definition_set.each do |definition|
+    definition.scan(/(?:^|\s+)(#[[:alnum:]]+)/).flatten.each do |d|
+      if seen_tags.include? d
+        next
+      else
+        seen_tags.push(d) if d =~ /#[[:alnum:]]+/
+      end
+    end
+  end
+
+  # ausgeben
+  formatter(seen_tags.sort).each {|line| event.respond line }
+
+  return
+
+end
+
 def shut_down(b)
   bot = b
   puts "Auf Wiedersehen!"
