@@ -116,6 +116,10 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       event << "Fehlerhafter Aufruf."
       return
     end
+    if keyword =~ /^#/
+      event << "Begriffe können keine Hashtags sein."
+      return
+    end
 
     # hinweis auf mehrfache definitionen
     definition = targs.join(' ')
@@ -414,7 +418,10 @@ end
 # Der Suchstring kann mit %-Wildcards gebaut werden, z. B. %string, string%, %string%.
 # Standard ist %string%.
 #
-bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.', usage: '~wasist [ --alles | --bsuche Suchtext-mit-%-Wildcards ] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" )') do |event, *args|
+# #Hashtag
+# Durchsucht Definitionen nach Hashtag und gibt deren Begriffe aus.
+#
+bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.', usage: '~wasist ( [ --alles ] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) | --bsuche Suchtext-mit-%-Wildcards | #Hashtag )') do |event, *args|
   seen(event)
 
   cmd = args.shift if args[0] =~ /^--/
@@ -426,8 +433,37 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
     event << "Fehlerhafter Aufruf."
     return
   end
+  if keyword =~ /^#/ and keyword =~ /\s/
+    event << "Kein Hashtag."
+    return
+  end
 
-  if cmd.nil? or cmd == '--alles' or cmd == '--verbose'
+  if keyword =~ /^#/
+    keyword_set = DB[:keywords].select(:name, :definition).join(:definitions, :idkeyword => :id).where(Sequel.ilike(Sequel[:definitions][:definition], "%#{keyword}%")).where(hidden: false).order(:name)
+
+    seen_keywords = []
+    keyword_set.each do |row|
+      # treffer mit hashtags einengen, weil like-suche zu viel findet
+      if row[:definition] =~ /#{keyword}\b/
+
+        # doppelte keywords aussortieren
+        if seen_keywords.include? row[:name]
+          next
+        else
+          seen_keywords.push row[:name]
+        end
+
+      end
+    end
+
+    if seen_keywords.any?
+      # ausgeben
+      formatter(seen_keywords).each {|line| event.respond line }
+    else
+      event.respond 'Unbekannt.'
+    end
+
+  elsif cmd.nil? or cmd == '--alles' or cmd == '--verbose'
     # begriff bekannt?
     if cmd.nil?
       db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
@@ -920,6 +956,7 @@ bot.command([:wuerfeln, :roll], description: 'Würfelt bis 9d999.', usage: '~wue
 end
 
 # Fragt die Datenbank mit einem zufaelligen Begriff ab.
+# Jeder.
 #
 bot.command([:zufaellig, :random, :rnd], description: 'Zeigt einen zufälligen Begriff.', usage: '~zufaellig') do |event, *args|
   seen(event)
