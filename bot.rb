@@ -444,7 +444,7 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
     seen_keywords = []
     keyword_set.each do |row|
       # treffer mit hashtags einengen, weil like-suche zu viel findet
-      if row[:definition] =~ /#{keyword}\b/
+      if row[:definition] =~ /#{keyword}\b/i
 
         # doppelte keywords aussortieren
         if seen_keywords.include? row[:name]
@@ -1051,6 +1051,7 @@ bot.command([:tagszeigen, :showtags], description: 'Zeigt alle Hashtags.', usage
   seen_tags = []
   definition_set.each do |definition|
     definition.scan(/(?:^|\s+)(#[[:alnum:]]+)/).flatten.each do |d|
+      d.downcase!
       if seen_tags.include? d
         next
       else
