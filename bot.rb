@@ -61,6 +61,7 @@ DB.create_table? :definitions do
   String :definition, text: true
   Integer :iduser
   Integer :idkeyword
+  TrueClass :pinned
   Time :created
   Time :changed
 end
@@ -158,6 +159,8 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 	  changed: now
 	)
 
+        # TODO
+        # hier pin schreiben
 	DB[:definitions].insert(
 	  definition: targs.join(' '),
 	  iduser: user[:id],
@@ -211,6 +214,8 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
       # normale definition
       unless db_template and attribute
+        # TODO
+        # hier pin schreiben
         DB[:definitions].insert(
 	  definition: targs.join(' '),
 	  iduser: user[:id],
@@ -397,6 +402,78 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
     event.respond 'Erledigt.'
 
+  # pin
+  elsif cmd == "--pin"
+    # zwei argumente muessen da sein
+    # ziffer muss ziffer sein
+    # keyword muss vorhanden sein
+    # definition muss vorhanden sein
+    # definition als pinned speichern
+    if targs.size < 2 or targs[1] !~ /^[1-9]\d?$/i
+      event.respond 'Fehlerhafter Aufruf.'
+      return
+    end
+
+    keyword = targs.shift || ""
+    keyword.delete! "\""
+
+    # begriff bekannt?
+    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
+    unless db_keyword
+      event.respond 'Unbekannt.'
+      return
+    end
+    if db_keyword[:hidden]
+      event.respond 'Begriff darf nicht versteckt sein.'
+      return
+    end
+
+    # alias aufloesen
+    if db_keyword[:alias_id]
+      definition_set = DB[:definitions].where(idkeyword: db_keyword[:alias_id])
+    else
+      definition_set = DB[:definitions].where(idkeyword: db_keyword[:id])
+    end
+
+    # zu pinnenden eintrag finden
+    i = 0
+    db_definition = {}
+    db_pinned_definition = {}
+    definition_set.reverse_order(:pinned).order(:created).each do |definition|
+      i += 1
+      if targs[0].to_i == i
+	db_definition = definition
+      end
+      if definition[:pinned] == true
+        db_pinned_definition = definition
+      end
+    end
+    if db_definition.empty?
+      event << "Unbekannte Ziffer."
+      return
+    end
+
+    # auf alias hinweisen
+    if db_keyword[:alias_id]
+      event.respond 'Hinweis: Alias aufgelöst, --pin wird auf Original angewendet.'
+    end
+    # auf bereits gepinnten eintrag hinweisen
+    if db_pinned_definition
+      token = db_pinned_definition[:definition].split(/ /)
+      db_pinned_definition[:definition] = token[0] + ' .. ' + token[-1] if token.size > 3
+      event.respond "Hinweis: Gepinnter Eintrag \"#{db_pinned_definition[:definition]}\" wird überschrieben."
+    end
+
+    # bereits gepinnten ueberschreiben
+    if db_pinned_definition
+      DB[:definitions].where(id: db_pinned_definition[:id]).update(pinned: false)
+    end
+
+    # neuen speichern
+    DB[:definitions].where(id: db_definition[:id]).update(pinned: true)
+
+    event.respond 'Erledigt.'
+
   # unbekanntes kommando
   else
     event << "Unbekanntes Kommando."
@@ -527,10 +604,14 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
 
     i = 0
     if cmd.nil?
+      # TODO
+      # hier nach pin sortieren
       definition_set.order(:created).each do |definition|
         event << "#{definition[:definition]} (#{i += 1})"
       end
     else
+      # TODO
+      # hier nach pin sortieren
       definition_set.order(:created).each do |definition|
         created = Time.at(definition[:created].to_i)
         event << "#{definition[:definition]} (#{definition[:username]} #{created.strftime('%H:%M %d.%m.%y')}) (#{i += 1})"
@@ -701,6 +782,9 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
     DB[:keywords].where(id: db_keyword[:id]).delete
 
     event.respond 'Erledigt.'
+
+  # TODO
+  # hier pin loeschen
 
   # unbekanntes kommando
   else
