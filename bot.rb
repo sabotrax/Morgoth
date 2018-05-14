@@ -96,7 +96,10 @@ bot = Discordrb::Commands::CommandBot.new token: config['bot_token'], client_id:
 # --primer Begriff true|false
 # Fuegt Begriff zur Liste hinzu bzw. entfernt davon, die Benutzern beim ersten Aufruf des Bots angezeigt werden.
 #
-bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ein.', usage: '~merke [ --alias Alias Begriff ] [ --hidden ] [ --primer Begriff ( true | false ) ] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung') do |event, *args|
+# --pin Begriff Ziffer
+# Pinnt Eintrag des Begriffs unter Angabe der Ziffer aus wasist.
+#
+bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ein.', usage: '~merke ( ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung | [ --alias Alias Begriff | --hidden | --primer Begriff ( true | false ) | --pin Begriff Klammer-Ziffer aus ~wasist ] )') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
@@ -159,12 +162,11 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 	  changed: now
 	)
 
-        # TODO
-        # hier pin schreiben
 	DB[:definitions].insert(
 	  definition: targs.join(' '),
 	  iduser: user[:id],
 	  idkeyword: idkeyword,
+          pinned: false,
 	  created: now,
 	  changed: now
 	)
@@ -214,12 +216,11 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
       # normale definition
       unless db_template and attribute
-        # TODO
-        # hier pin schreiben
         DB[:definitions].insert(
 	  definition: targs.join(' '),
 	  iduser: user[:id],
 	  idkeyword: idkeyword,
+          pinned: false,
 	  created: now,
 	  changed: now
         )
@@ -404,11 +405,6 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
   # pin
   elsif cmd == "--pin"
-    # zwei argumente muessen da sein
-    # ziffer muss ziffer sein
-    # keyword muss vorhanden sein
-    # definition muss vorhanden sein
-    # definition als pinned speichern
     if targs.size < 2 or targs[1] !~ /^[1-9]\d?$/i
       event.respond 'Fehlerhafter Aufruf.'
       return
@@ -458,7 +454,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       event.respond 'Hinweis: Alias aufgelöst, --pin wird auf Original angewendet.'
     end
     # auf bereits gepinnten eintrag hinweisen
-    if db_pinned_definition
+    if db_pinned_definition.any?
       token = db_pinned_definition[:definition].split(/ /)
       db_pinned_definition[:definition] = token[0] + ' .. ' + token[-1] if token.size > 3
       event.respond "Hinweis: Gepinnter Eintrag \"#{db_pinned_definition[:definition]}\" wird überschrieben."
@@ -556,16 +552,16 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
     if db_keyword[:alias_id]
       if cmd.nil?
         db_orig_keyword = DB[:keywords].where(id: db_keyword[:alias_id]).first
-        definition_set = DB[:definitions].where(idkeyword: db_keyword[:alias_id])
+        definition_set = DB[:definitions].where(idkeyword: db_keyword[:alias_id]).reverse_order(:pinned).order_append(:created)
       else
         db_orig_keyword = DB.fetch('SELECT `keywords`.*, `users`.`name` AS \'username\' FROM `keywords` INNER JOIN `users` ON (`users`.`id` = `keywords`.`iduser`) WHERE (`keywords`.`id` = ?)', db_keyword[:alias_id]).first
-        definition_set = DB.fetch('SELECT `definitions`.*, `users`.`name` AS \'username\' FROM `definitions` INNER JOIN `users` on (`users`.`id` = `definitions`.`iduser`) WHERE (`definitions`.`idkeyword` = ?)', db_keyword[:alias_id])
+        definition_set = DB.fetch('SELECT `definitions`.*, `users`.`name` AS \'username\' FROM `definitions` INNER JOIN `users` on (`users`.`id` = `definitions`.`iduser`) WHERE (`definitions`.`idkeyword` = ?) ORDER BY `definitions`.`pinned` DESC, `definitions`.`created` ASC', db_keyword[:alias_id])
       end
     else
       if cmd.nil?
-        definition_set = DB[:definitions].where(idkeyword: db_keyword[:id])
+        definition_set = DB[:definitions].where(idkeyword: db_keyword[:id]).reverse_order(:pinned).order_append(:created)
       else
-        definition_set = DB.fetch('SELECT `definitions`.*, `users`.`name` AS \'username\' FROM `definitions` INNER JOIN `users` on (`users`.`id` = `definitions`.`iduser`) WHERE (`definitions`.`idkeyword` = ?)', db_keyword[:id])
+        definition_set = DB.fetch('SELECT `definitions`.*, `users`.`name` AS \'username\' FROM `definitions` INNER JOIN `users` on (`users`.`id` = `definitions`.`iduser`) WHERE (`definitions`.`idkeyword` = ?) ORDER BY `definitions`.`pinned` DESC, `definitions`.`created` ASC', db_keyword[:id])
       end
     end
 
@@ -604,17 +600,14 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
 
     i = 0
     if cmd.nil?
-      # TODO
-      # hier nach pin sortieren
-      definition_set.order(:created).each do |definition|
+      definition_set.each do |definition|
         event << "#{definition[:definition]} (#{i += 1})"
       end
     else
-      # TODO
-      # hier nach pin sortieren
-      definition_set.order(:created).each do |definition|
+      definition_set.each do |definition|
         created = Time.at(definition[:created].to_i)
-        event << "#{definition[:definition]} (#{definition[:username]} #{created.strftime('%H:%M %d.%m.%y')}) (#{i += 1})"
+        pinned = "(gepinnt) " if definition[:pinned]
+        event << "#{definition[:definition]} #{pinned}(#{definition[:username]} #{created.strftime('%H:%M %d.%m.%y')}) (#{i += 1})"
       end
     end
 
@@ -671,7 +664,10 @@ end
 # --alias Begriff
 # Löscht Alias.
 #
-bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenbank.', usage: '~vergiss ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Klammer-Ziffer aus ~wasist') do |event, *args|
+# --pin Begriff
+# Setz gepinnten Eintrag des Begriffs zurueck.
+#
+bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenbank.', usage: '~vergiss ( ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Klammer-Ziffer aus ~wasist | ( --alias | --pin ) ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) )') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
@@ -783,8 +779,29 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
 
     event.respond 'Erledigt.'
 
-  # TODO
-  # hier pin loeschen
+  elsif cmd == "--pin"
+    # begriff bekannt?
+    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
+    unless db_keyword
+      event.respond 'Unbekannt.'
+      return
+    end
+
+    # alias aufloesen
+    if db_keyword[:alias_id]
+      db_definition = DB[:definitions].where(idkeyword: db_keyword[:alias_id], pinned: true).first
+    else
+      db_definition = DB[:definitions].where(idkeyword: db_keyword[:id], pinned: true).first
+    end
+
+    unless db_definition
+      event.respond 'Kein Eintrag gepinnt.'
+      return
+    end
+
+    DB[:definitions].where(id: db_definition[:id]).update(pinned: false)
+
+    event.respond 'Erledigt.'
 
   # unbekanntes kommando
   else
