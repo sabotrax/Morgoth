@@ -25,21 +25,28 @@ def tokenize(args)
   args.join(' ').scan(/(?:"[^"]+"|[^\s]+)/)
 end
 
-# in zeilen zu fuenf ausgeben
-def formatter(tokens)
+# formatter
+# Formatiert Arrays zur Ausgabe in variabel lange Sub-Arrays
+#
+def formatter(tokens, limit = 5)
+  unless limit.is_a? Integer and limit > 0
+    raise ArgumentError, 'Argument is not a positive integer > 0.'
+  end
+
   formatted = []
   i = 0
   j = []
   tokens.each do |token|
     j.push token
     i += 1
-    if i % 5 == 0
+    if i % limit == 0
       formatted.push j.join(', ')
       j.clear
     elsif i == tokens.size
       formatted.push j.join(', ')
     end
   end
+
   return formatted
 end
 
