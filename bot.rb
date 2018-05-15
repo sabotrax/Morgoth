@@ -125,6 +125,13 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       return
     end
 
+    # gibt es das keyword schon?
+    old_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
+    if old_keyword and cmd == '--hidden'
+      event.respond 'Kann nur neue Einträge verstecken.'
+      return
+    end
+
     # hinweis auf mehrfache definitionen
     definition = targs.join(' ')
     db_definition = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where({Sequel.function(:upper, :definition) => Sequel.function(:upper, definition)}).where(hidden: false)
@@ -135,13 +142,6 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       end
       event << 'Hinweis: bereits definiert als'
       formatter(keyword_names).each {|line| event << line }
-    end
-
-    # gibt es das keyword schon?
-    old_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
-    if old_keyword and cmd == '--hidden'
-      event.respond 'Kann nur neue Einträge verstecken.'
-      return
     end
 
     now = Time.now.to_i
