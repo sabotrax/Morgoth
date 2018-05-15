@@ -133,7 +133,8 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       db_definition.each do |k|
 	keyword_names.push k[:name]
       end
-      event.respond "Hinweis: Bereits definiert als #{keyword_names.join(', ')}."
+      event << 'Hinweis: bereits definiert als'
+      formatter(keyword_names).each {|line| event << line }
     end
 
     # gibt es das keyword schon?
@@ -220,7 +221,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       end
     end
 
-    event.respond 'Erledigt.'
+    event << 'Erledigt.'
 
   # alias
   elsif cmd == "--alias"
