@@ -103,7 +103,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
-    event << "Nur Bot-User dürfen das!"
+    event.respond 'Nur Bot-User dürfen das!'
     return
   end
 
@@ -117,11 +117,11 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     keyword = targs.shift
     keyword.delete! '"'
     if targs.empty?
-      event << "Fehlerhafter Aufruf."
+      event.respond 'Fehlerhafter Aufruf.'
       return
     end
     if keyword =~ /^#/
-      event << "Begriffe können keine Hashtags sein."
+      event.respond 'Begriffe können keine Hashtags sein.'
       return
     end
 
@@ -133,7 +133,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       db_definition.each do |k|
 	keyword_names.push k[:name]
       end
-      event << "Hinweis: Bereits definiert als #{keyword_names.join(', ')}."
+      event.respond "Hinweis: Bereits definiert als #{keyword_names.join(', ')}."
     end
 
     # gibt es das keyword schon?
@@ -142,13 +142,6 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       event.respond 'Kann nur neue Einträge verstecken.'
       return
     end
-
-    # hat das keyword eine zugeordnete vorlage?
-    # falls ja, ist erste wort nach dem keyword ein attribut der vorlage?
-    # falls nein, unten weiter
-    # falls ja, objekt laden und typecheck durchfuehren
-    # nicht ok -> fehlermeldung + ende
-    # ok, dann neuen wert speichern, objekt schreiben
 
     now = Time.now.to_i
     # neues keyword + eintrag
@@ -227,12 +220,12 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       end
     end
 
-    event << "Erledigt."
+    event.respond 'Erledigt.'
 
   # alias
   elsif cmd == "--alias"
     if targs.size < 2
-      event << "Fehlerhafter Aufruf."
+      event.respond 'Fehlerhafter Aufruf.'
       return
     end
 
@@ -244,18 +237,18 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     # alias darf nicht vorhanden sein
     link_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, link)}).first
     if link_keyword
-      event << "Alias bereits vorhanden."
+      event.respond 'Alias bereits vorhanden.'
       return
     end
     
     # ziel muss vorhanden sein, aber selbst kein alias
     target_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, target)}).first
     unless target_keyword
-      event << "Ziel-Begriff nicht vorhanden."
+      event.respond 'Ziel-Begriff nicht vorhanden.'
       return
     end
     if target_keyword[:alias_id]
-      event << "Ziel-Begriff ist Alias, aber muss Begriff sein."
+      event.respond 'Ziel-Begriff ist Alias, aber muss Begriff sein.'
       return
     end
 
@@ -269,7 +262,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       changed: now
     )
 
-    event << "Erledigt."
+    event.respond 'Erledigt.'
 
   # primer
   elsif cmd == "--primer"
@@ -445,7 +438,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       end
     end
     if db_definition.empty?
-      event << "Unbekannte Ziffer."
+      event.respond 'Unbekannte Ziffer.'
       return
     end
 
@@ -470,9 +463,9 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
     event.respond 'Erledigt.'
 
-  # unbekanntes kommando
+  # unbekannte option
   else
-    event << "Unbekanntes Kommando."
+    event.respond 'Unbekannte Option.'
   end
 
 end 
@@ -503,11 +496,11 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
   keyword = args.join(' ') || ''
   keyword.delete! "\""
   if keyword.empty?
-    event << "Fehlerhafter Aufruf."
+    event.respond 'Fehlerhafter Aufruf.'
     return
   end
   if keyword =~ /^#/ and keyword =~ /\s/
-    event << "Kein Hashtag."
+    event.respond 'Kein Hashtag.'
     return
   end
 
@@ -539,12 +532,12 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
   elsif cmd.nil? or cmd == '--alles' or cmd == '--verbose'
     # begriff bekannt?
     if cmd.nil?
-      db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
+      db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
     else
       db_keyword = DB.fetch('SELECT `keywords`.*, `users`.`name` AS \'username\' FROM `keywords` INNER JOIN `users` ON (`users`.`id` = `keywords`.`iduser`) WHERE (UPPER(`keywords`.`name`) = ?)', keyword.upcase).first
     end
     unless db_keyword
-      event << "Unbekannt."
+      event.respond 'Unbekannt.'
       return
     end
 
@@ -613,7 +606,7 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
 
   elsif cmd == "--bsuche" or cmd == "--ksearch"
     if keyword.length < 3
-      event << "Suchbegriff zu kurz. Drei Zeichen bitte."
+      event.respond 'Suchbegriff zu kurz. Drei Zeichen bitte.'
       return
     elsif keyword !~ /%/
       keyword = '%' + keyword + '%'
@@ -622,7 +615,7 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
     # begriff bekannt?
     db_keywords = DB[:keywords].where(Sequel.ilike(:name, keyword)).where(hidden: false).order(:name)
     unless db_keywords.any?
-      event << "Unbekannt."
+      event.respond 'Unbekannt.'
       return
     end
 
@@ -646,9 +639,9 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
     # ausgeben
     formatter(kw_names).each {|line| event.respond line }
 
-  # unbekanntes kommando
+  # unbekannte option
   else
-    event << "Unbekanntes Kommando."
+    event.respond 'Unbekannte Option.'
   end
 
   return
@@ -671,7 +664,7 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
-    event << "Nur Bot-User dürfen das!"
+    event.respond 'Nur Bot-User dürfen das!'
     return
   end
 
@@ -684,7 +677,7 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
   keyword = targs.shift || ""
   keyword.delete! "\""
   if keyword.empty?
-    event << "Fehlerhafter Aufruf."
+    event.respond 'Fehlerhafter Aufruf.'
     return
   end
 
@@ -692,7 +685,7 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
     # begriff bekannt?
     db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
     unless db_keyword
-      event << "Unbekannt."
+      event.respond 'Unbekannt.'
       return
     end
 
@@ -707,7 +700,7 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
     if targs[0] !~ /^\d+$/
       # nur noetig, wenn mehr als ein eintrag vorhanden ist
       if definition_set.count > 1
-        event << "Ziffer fehlt."
+        event.respond 'Ziffer fehlt.'
         return
       else
         targs[0] = 1
@@ -728,7 +721,7 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
       end
     end
     if db_definition.empty?
-      event << "Unbekannte Ziffer."
+      event.respond 'Unbekannte Ziffer.'
       return
     end
 
@@ -753,9 +746,9 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
 	  definition_set.where(id: db_definition[:id]).delete
 	end
 
-	wirklich_event.respond "Erledigt."
+	wirklich_event.respond 'Erledigt.'
       else
-	wirklich_event.respond "Dann nicht."
+	wirklich_event.respond 'Dann nicht.'
       end
     end
 
@@ -765,13 +758,13 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
     # begriff bekannt?
     db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
     unless db_keyword
-      event << "Unbekannt."
+      event.respond 'Unbekannt.'
       return
     end
 
     # begriff muss alias sein
     unless db_keyword[:alias_id]
-      event << 'Kein Alias.'
+      event.respond 'Kein Alias.'
       return
     end
 
@@ -803,9 +796,9 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
 
     event.respond 'Erledigt.'
 
-  # unbekanntes kommando
+  # unbekannte option
   else
-    event << "Unbekanntes Kommando."
+    event.respond 'Unbekannte Option.'
   end
 
 end
@@ -848,7 +841,7 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
   unless user
-    event << "Nur Bot-Master dürfen das!"
+    event.respond 'Nur Bot-Master dürfen das!'
     return
   end
 
@@ -863,7 +856,7 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
     duser = targs.shift || ""
     duser.delete! "\""
     if duser.empty?
-      event << "Fehlerhafter Aufruf."
+      event.respond 'Fehlerhafter Aufruf.'
       return
     end
 
@@ -877,14 +870,14 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
       end
     end
     if new_user.empty?
-      event << "Unbekannter Discord-User."
+      event.respond 'Unbekannter Discord-User.'
       return
     end
 
     # gibt es den user schon im bot?
     old_user = DB[:users].where(discord_id: new_user['id']).first
     if old_user
-      event << "User schon vorhanden."
+      event.respond 'User schon vorhanden.'
       return
     end
 
@@ -904,27 +897,27 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
       changed: now
     )
 
-    event << "Erledigt."
+    event.respond 'Erledigt.'
 
   # disable
   elsif cmd =~ /^--(enable|disable)$/
     duser = targs.shift || ""
     duser.delete! "\""
     if duser.empty?
-      event << "Fehlerhafter Aufruf."
+      event.respond 'Fehlerhafter Aufruf.'
       return
     end
 
     # gibt es den user im bot?
     target_user = DB[:users].where({Sequel.function(:upper, :name) => Sequel.function(:upper, duser)}).first
     unless target_user
-      event << "User nicht vorhanden."
+      event.respond 'Nicht vorhanden.'
       return
     end
 
     # user darf kein botmaster sein
     if target_user[:botmaster]
-      event << "User darf kein Bot-Master sein."
+      event.respond 'User darf kein Bot-Master sein.'
       return
     end
 
@@ -936,27 +929,27 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
 
     DB[:users].where(id: target_user[:id]).update(enabled: enabled)
 
-    event << "Erledigt."
+    event.respond 'Erledigt.'
 
   # botmaster
   elsif cmd == "--botmaster"
     duser = targs.shift || ""
     duser.delete! "\""
     if duser.empty?
-      event << "Fehlerhafter Aufruf."
+      event.respond 'Fehlerhafter Aufruf.'
       return
     end
 
     # gibt es den user im bot?
     target_user = DB[:users].where({Sequel.function(:upper, :name) => Sequel.function(:upper, duser)}).first
     unless target_user
-      event << "User nicht vorhanden."
+      event.respond 'User nicht vorhanden.'
       return
     end
 
     DB[:users].where(id: target_user[:id]).update(botmaster: true)
 
-    event << "Erledigt."
+    event.respond 'Erledigt.'
 
   # list
   elsif cmd == "--list"
@@ -983,9 +976,9 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
       event << "Keine User."
     end
 
-  # falsches kommando
+  # unbekannte option
   else
-    event << "Unbekanntes Kommando."
+    event.respond 'Unbekannte Option.'
   end
 
 end
@@ -1001,11 +994,11 @@ bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der 
   dataset = definition_set.all + template_set.all
   sdataset = dataset.sort_by {|row| row[:created]}.reverse
 
-  event.respond "**Die neuesten Einträge:**"
+  event << '**Die neuesten Einträge:**'
 
   unless sdataset.count > 0
-    event.respond "Keine."
-    event.respond "Das ist ein bisschen traurig."
+    event << 'Keine.'
+    event << 'Das ist ein bisschen traurig.'
     return
   end
 
@@ -1021,7 +1014,8 @@ bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der 
   end
 
   # ausgeben
-  formatter(seen_keywords).each {|line| event.respond line }
+  #formatter(seen_keywords).each {|line| event.respond line }
+  formatter(seen_keywords).each {|line| event << line }
 
   return
 
@@ -1038,7 +1032,7 @@ bot.command([:wuerfeln, :roll], description: 'Würfelt bis 9d999.', usage: '~wue
 
   args.push '1d6' unless args.any?
   unless args[0] =~ /^([1-9])(?:(?:d|w)([1-9]\d{,2}))?$/
-    event << "Fehlerhafter Aufruf."
+    event.respond 'Fehlerhafter Aufruf.'
     return
   end
   anzahl = $1.to_i
@@ -1064,8 +1058,8 @@ bot.command([:zufaellig, :random, :rnd], description: 'Zeigt einen zufälligen B
 
   db_keyword = DB[:keywords].where(hidden: false).order(Sequel.lit('RANDOM()')).first
   unless db_keyword
-    event.respond "Es gibt keine Einträge."
-    event.respond "Das ist ein bisschen traurig."
+    event << 'Es gibt keine Einträge.'
+    event << 'Das ist ein bisschen traurig.'
     return
   end
 
@@ -1082,7 +1076,7 @@ bot.command([:datenbank, :database, :db], description: 'Datenbank-Verwaltung. Nu
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
   unless user
-    event << "Nur Bot-Master dürfen das!"
+    event.respond 'Nur Bot-Master dürfen das!'
     return
   end
 
@@ -1126,9 +1120,9 @@ bot.command([:datenbank, :database, :db], description: 'Datenbank-Verwaltung. Nu
     server.run
     scheduler.join
 
-  # falsches kommando
+  # unbekannte option
   else
-    event << "Unbekanntes Kommando."
+    event.respond 'Unbekannte Option.'
   end
 
 end
@@ -1141,11 +1135,11 @@ bot.command([:tagszeigen, :showtags], description: 'Zeigt alle Hashtags.', usage
 
   definition_set = DB[:definitions].where(Sequel.ilike(:definition, '%#%')).map(:definition)
 
-  event.respond "**Alle Hashtags:**"
+  event << '**Alle Hashtags:**'
 
   unless definition_set.any?
-    event.respond "Keine."
-    event.respond "Das ist ein bisschen traurig."
+    event << 'Keine.'
+    event << 'Das ist ein bisschen traurig.'
     return
   end
 
@@ -1162,7 +1156,7 @@ bot.command([:tagszeigen, :showtags], description: 'Zeigt alle Hashtags.', usage
   end
 
   # ausgeben
-  formatter(seen_tags.sort).each {|line| event.respond line }
+  formatter(seen_tags.sort).each {|line| event << line }
 
   return
 
