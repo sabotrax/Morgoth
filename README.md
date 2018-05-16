@@ -30,15 +30,15 @@ Commands:
 
 NAME
 
-~define - store factiods
+**~define - store factiods**
 
 SYNOPSIS
 
-~define [ --alias alias keyword ] [ --hidden ] [ --primer keyword ( true | false ) ] ( keyword | other-keyword | "just another keyword" ) text
+~define ( ( keyword | other-keyword | "just another" ) text | [ --alias alias keyword | --hidden | --primer keyword ( true | false ) | --pin keyword number ] )
 
 DESCRIPTION
 
-Only one long option is allowed at a time.
+Only one option is allowed at a time.
 
 --alias - Creates an alias to the keyword
 
@@ -46,17 +46,21 @@ Only one long option is allowed at a time.
 
 --primer - Makes a keyword a primer. Primer factoids are shown when a user talks to the bot the first time. Useful for FAQs.
 
+--pin - Normally factoids are ordered by date of creation. A pinned entry is shown first. Only one entry can be pinned.
+
 NAME
 
-~whatis - display factiods
+**~whatis - display factiods**
 
 SYNOPSIS
 
-~whatis [ --verbose | --ksearch search-string-with-%-wildcards ] ( keyword | other-keyword | "just another keyword" )
+~whatis ( [ --verbose ] ( keyword | other-keyword | "just another" ) | --ksearch %-wildcarded-search-string | #hashtag )
 
 DESCRIPTION
 
-Only one long option is allowed at a time.
+Only one option is allowed at a time.
+When asked for a keyword, ~whatis is displaying the keyword and its factoids.
+When used with --ksearch or a hashtag, it's showing keywords only.
 
 --verbose - Display also creating user and creation time.
 
