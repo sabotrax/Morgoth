@@ -3,27 +3,45 @@
 
 ### What it is
 
-Morgoth is a Discord bot that can be a helper and
-general source of fun.
+Morgoth is an information-storing Discord bot and general source of fun.
 
 Features:
 
-* Remember and recall factoids.
+* Remember and recall factoids (which are just keyword/text combos).
+* Search, show latest and display random keywords.
+* Create aliases and hashtags.
 * User management.
-* Download database on the fly.
 * Greeting new users with configurable in-bot messages.
+* Download the bot's database on the fly.
 * Rolling dice.
+
+Examples:
+
+~define "Dwarf Fortress" If you like great games and ASCII chars, then this is it.
+
+~define --alias DF "Dwarf Fortress"
+
+~define df #games
+
+~whatis df  
+DF (Dwarf Fortress)  
+If you like great games and ASCII chars, then this is it. (1)  
+#games (2)
+
+~whatis #games  
+Dwarf Fortress
+
+~undefine df 2
+
+~define df #greatgames
 
 ### Documentation
 
 Overview:
 
-The bot's primary job is to store and display factoids. A factoid is made up of a keyword and some text.
-
-Everybody on the Discord server can execute non-writing bot commands, like asking the bot about stuff.
-
-Only users known to the bot can execute writing commands, like adding new stuff or creating aliases.
-
+The bot's primary job is to store and display factoids. A factoid is made up of a keyword and some text.  
+Everybody on the Discord server can execute non-writing bot commands, like asking the bot about stuff.  
+Only users known to the bot can execute writing commands, like adding new stuff or creating aliases.  
 Users known as bot masters can elevate others.
 
 Commands:
@@ -62,7 +80,7 @@ Only one option is allowed at a time.
 When asked for a keyword, ~whatis is displaying the keyword and its factoids.
 When used with --ksearch or a hashtag, it's showing keywords only.
 
---verbose - Display also creating user and creation time.
+--verbose - Also show alias, creator and timestamp.
 
 --ksearch - Search for keywords. %-wildcards are implicit, so 'string' is '%string%', but '%string' or 'string%' are different.
 
