@@ -1333,10 +1333,10 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
     return
   end
 
-  unless user[:id] == 1
-    event.respond 'Das geht noch nicht.'
-    return
-  end
+  #unless user[:id] == 1
+    #event.respond 'Das geht noch nicht.'
+    #return
+  #end
 
   seen(event, user)
 
