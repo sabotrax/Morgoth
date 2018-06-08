@@ -77,6 +77,14 @@ DB.create_table? :sightings do
   Integer :discord_user_id
   Time :seen
 end
+DB.create_table? :actions do
+  primary_key :id
+  Integer :iduser
+  String :action
+  String :payload, text: true
+  TrueClass :applied, default: false
+  String :created
+end
 
 bot = Discordrb::Commands::CommandBot.new token: config['bot_token'], client_id: config['bot_client_id'], prefix: config['bot_prefix'], help_command: [:hilfe, :help]
 
@@ -148,7 +156,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     # neues keyword + eintrag
     unless old_keyword
       DB.transaction do
-	idkeyword = DB[:keywords].insert(
+	id_kw = idkeyword = DB[:keywords].insert(
 	  name: keyword,
 	  iduser: user[:id],
           hidden: cmd == '--hidden' ? true : false,
@@ -156,7 +164,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 	  changed: now
 	)
 
-	DB[:definitions].insert(
+	id_df = DB[:definitions].insert(
 	  definition: targs.join(' '),
 	  iduser: user[:id],
 	  idkeyword: idkeyword,
@@ -164,6 +172,18 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 	  created: now,
 	  changed: now
 	)
+
+        # fuer undo merken
+        action = [
+          [ :keywords, id_kw, keyword, user[:id], cmd == '--hidden' ? true : false, now, now ],
+          [ :definitions, id_df, targs.join(' '),  user[:id], idkeyword, false, now, now ]
+        ]
+        DB[:actions].insert(
+          iduser: user[:id],
+          action: 'insert',
+          payload: YAML::dump(action),
+          created: now
+        )
       end
 
     # weiterer eintrag zum vorhandenen keyword
@@ -202,22 +222,49 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
         end
 
         if attribute
-          sobject = YAML::dump(object)
-          DB[:templates].where(idkeyword: db_template[:idkeyword]).update(object: sobject)
+          DB.transaction do
+            # fuer undo merken
+            db_data = DB[:templates].where(idkeyword: db_template[:idkeyword]).first
+            action = [
+              [ :templates, db_data[:idkeyword], db_data[:object], db_data[:created], db_data[:changed] ]
+            ]
+            DB[:actions].insert(
+              iduser: user[:id],
+              action: 'update',
+              payload: YAML::dump(action),
+              created: now
+            )
+
+            sobject = YAML::dump(object)
+            DB[:templates].where(idkeyword: db_template[:idkeyword]).update(object: sobject, changed: now)
+          end
         end
 
       end
 
       # normale definition
       unless db_template and attribute
-        DB[:definitions].insert(
-	  definition: targs.join(' '),
-	  iduser: user[:id],
-	  idkeyword: idkeyword,
-          pinned: false,
-	  created: now,
-	  changed: now
-        )
+        DB.transaction do
+          id = DB[:definitions].insert(
+	    definition: targs.join(' '),
+	    iduser: user[:id],
+	    idkeyword: idkeyword,
+            pinned: false,
+	    created: now,
+	    changed: now
+          )
+
+          # fuer undo merken
+          action = [
+            [ :definitions, id, targs.join(' '),  user[:id], idkeyword, false, now, now ]
+          ]
+          DB[:actions].insert(
+            iduser: user[:id],
+            action: 'insert',
+            payload: YAML::dump(action),
+            created: now
+          )
+        end
       end
     end
 
@@ -254,14 +301,28 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     end
 
     now = Time.now.to_i
-    DB[:keywords].insert(
-      name: link,
-      iduser: user[:id],
-      alias_id: target_keyword[:id],
-      hidden: target_keyword[:hidden] == true ? true : false,
-      created: now,
-      changed: now
-    )
+
+    DB.transaction do
+      id_kw = DB[:keywords].insert(
+        name: link,
+        iduser: user[:id],
+        alias_id: target_keyword[:id],
+        hidden: target_keyword[:hidden] == true ? true : false,
+        created: now,
+        changed: now
+      )
+
+      # fuer undo merken
+      action = [
+        [ :keywords, id_kw, link, user[:id], target_keyword[:hidden] == true ? true : false, now, now ]
+      ]
+      DB[:actions].insert(
+        iduser: user[:id],
+        action: 'insert',
+        payload: YAML::dump(action),
+        created: now
+      )
+    end
 
     event.respond 'Erledigt.'
 
@@ -299,11 +360,26 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     end
 
     if targs[0].downcase == 'true'
-      action = true
+      primer = true
     else
-      action = false
+      primer = false
     end
-    DB[:keywords].where(id: id).update(primer: action)
+
+    DB.transaction do
+      # fuer undo merken
+      db_data = DB[:keywords].where(id: id).first
+      action = [
+        [ :keywords, db_data[:id], db_data[:name], db_data[:iduser], db_data[:alias_id], db_data[:primer], db_data[:hidden], db_data[:created].to_i, db_data[:changed].to_i ]
+      ]
+      DB[:actions].insert(
+        iduser: user[:id],
+        action: 'update',
+        payload: YAML::dump(action),
+        created: Time.now.to_i
+      )
+
+      DB[:keywords].where(id: id).update(primer: primer)
+    end
 
     event.respond 'Erledigt.'
 
@@ -346,6 +422,8 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       now = Time.now.to_i
 
       # neues keyword + template
+      # TODO
+      # in undo aufnehmen
       unless db_keyword
         DB.transaction do
 	  idkeyword = DB[:keywords].insert(
@@ -365,6 +443,8 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
         end
 
       # keyword vorhanden, template dazu
+      # TODO
+      # in undo aufnehmen
       else
         DB[:templates].insert(
           idkeyword: db_keyword[:id],
@@ -381,10 +461,14 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       if db_keyword
 
         # keyword hat definitionen
+        # TODO
+        # in undo aufnehmen
         if DB[:definitions].where(idkeyword: db_keyword[:id]).first
           DB[:templates].where(idkeyword: db_keyword[:id]).where(Sequel.ilike(:object, "--- !ruby/object:#{targs[0]}%")).delete
 
         # keyword mit template allein
+        # TODO
+        # in undo aufnehmen
         else
           DB.transaction do
             DB[:keywords].where(id: db_keyword[:id]).delete
@@ -454,13 +538,30 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       event.respond "Hinweis: Gepinnter Eintrag \"#{db_pinned_definition[:definition]}\" wird überschrieben."
     end
 
-    # bereits gepinnten ueberschreiben
-    if db_pinned_definition
-      DB[:definitions].where(id: db_pinned_definition[:id]).update(pinned: false)
-    end
+    DB.transaction do
+      # fuer undo merken
+      action = []
+      if db_pinned_definition.any?
+        db_data = DB[:definitions].where(id: db_pinned_definition[:id]).first
+        action.push [ :definitions, db_data[:id], db_data[:definition], db_data[:iduser], db_data[:idkeyword], db_data[:pinned], db_data[:created].to_i, db_data[:changed].to_i ]
+      end
+      db_data = DB[:definitions].where(id: db_definition[:id]).first
+      action.push [ :definitions, db_data[:id], db_data[:definition], db_data[:iduser], db_data[:idkeyword], db_data[:pinned], db_data[:created].to_i, db_data[:changed].to_i ]
+      DB[:actions].insert(
+        iduser: user[:id],
+        action: 'update',
+        payload: YAML::dump(action),
+        created: Time.now.to_i
+      )
 
-    # neuen speichern
-    DB[:definitions].where(id: db_definition[:id]).update(pinned: true)
+      # bereits gepinnten ueberschreiben
+      if db_pinned_definition.any?
+        DB[:definitions].where(id: db_pinned_definition[:id]).update(pinned: false)
+      end
+
+      # neuen speichern
+      DB[:definitions].where(id: db_definition[:id]).update(pinned: true)
+    end
 
     event.respond 'Erledigt.'
 
@@ -534,6 +635,7 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
     # begriff bekannt?
     if cmd.nil?
       db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
+      db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first unless db_keyword
     else
       db_keyword = DB.fetch('SELECT `keywords`.*, `users`.`name` AS \'username\' FROM `keywords` INNER JOIN `users` ON (`users`.`id` = `keywords`.`iduser`) WHERE (UPPER(`keywords`.`name`) = ?)', keyword.upcase).first
     end
@@ -738,13 +840,43 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
 	# nur ein eintrag und keine templates: keyword, aliase und eintrag loeschen
 	if definition_set.count == 1 and ! db_template
 	  DB.transaction do
+            # fuer undo merken
+            db_data_set = DB[:keywords].where(id: db_definition[:idkeyword]).or(alias_id: db_definition[:idkeyword])
+            action = []
+            db_data_set.each do |row|
+              action.push [ :keywords, row[:id], row[:name], row[:iduser], row[:alias_id], row[:primer], row[:hidden], row[:created].to_i, row[:changed].to_i ]
+            end
+            definition_set.each do |row|
+              action.push [ :definitions, row[:id], row[:definition], row[:iduser], row[:idkeyword], row[:pinned], row[:created].to_i, row[:changed].to_i ]
+            end
+            DB[:actions].insert(
+              iduser: user[:id],
+              action: 'delete',
+              payload: YAML::dump(action),
+              created: Time.now.to_i
+            )
+
 	    DB[:keywords].where(id: db_definition[:idkeyword]).or(alias_id: db_definition[:idkeyword]).delete
 	    definition_set.delete
 	  end
 
-	# mehrere: eintrag loeschen
+	# mehrere eintraege: einen loeschen
 	else
-	  definition_set.where(id: db_definition[:id]).delete
+          DB.transaction do
+            # fuer undo merken
+            db_data = DB[:definitions].where(id: db_definition[:id]).first
+            action = [
+              [ :definitions, db_data[:id], db_data[:definition],  db_data[:iduser], db_data[:idkeyword], db_data[:pinned], db_data[:created].to_i, db_data[:changed].to_i ]
+            ]
+            DB[:actions].insert(
+              iduser: user[:id],
+              action: 'delete',
+              payload: YAML::dump(action),
+              created: Time.now.to_i
+            )
+
+	    definition_set.where(id: db_definition[:id]).delete
+          end
 	end
 
 	wirklich_event.respond 'Erledigt.'
@@ -769,7 +901,21 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
       return
     end
 
-    DB[:keywords].where(id: db_keyword[:id]).delete
+    DB.transaction do
+      # fuer undo merken
+      db_data = DB[:keywords].where(id: db_keyword[:id]).first
+      action = [
+        [ :keywords, db_data[:id], db_data[:name], db_data[:iduser], db_data[:alias_id], db_data[:primer], db_data[:hidden], db_data[:created].to_i, db_data[:changed].to_i ]
+      ]
+      DB[:actions].insert(
+        iduser: user[:id],
+        action: 'delete',
+        payload: YAML::dump(action),
+        created: Time.now.to_i
+      )
+
+      DB[:keywords].where(id: db_keyword[:id]).delete
+    end
 
     event.respond 'Erledigt.'
 
@@ -793,7 +939,21 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
       return
     end
 
-    DB[:definitions].where(id: db_definition[:id]).update(pinned: false)
+    DB.transaction do
+      # fuer undo merken
+      db_data = DB[:definitions].where(id: db_definition[:id]).first
+      action = [
+        [ :definitions, db_definition[:id], db_definition[:definition], db_definition[:iduser], db_definition[:idkeyword], db_definition[:pinned], db_definition[:created].to_i, db_definition[:changed].to_i ]
+      ]
+      DB[:actions].insert(
+        iduser: user[:id],
+        action: 'update',
+        payload: YAML::dump(action),
+        created: Time.now.to_i
+      )
+
+      DB[:definitions].where(id: db_definition[:id]).update(pinned: false)
+    end
 
     event.respond 'Erledigt.'
 
@@ -1160,6 +1320,219 @@ bot.command([:tagszeigen, :showtags], description: 'Zeigt alle Hashtags.', usage
   formatter(seen_tags.sort).each {|line| event << line }
 
   return
+
+end
+
+# macht bestimmte aktionen waehrend einer begrenzten zeitspanne rueckgaengig
+#
+bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. Funktioniert für 30 s nach der Aktion.', usage: '~undo') do |event, *args|
+  # recht zum aufruf pruefen
+  user = DB[:users].where(discord_id: event.user.id, enabled: true).first
+  unless user
+    event.respond 'Nur Bot-User dürfen das!'
+    return
+  end
+
+  unless user[:id] == 1
+    event.respond 'Das geht noch nicht.'
+    return
+  end
+
+  seen(event, user)
+
+  # gibt es etwas rueckgaengig zu machen?
+  db_action = DB[:actions].where(iduser: user[:id], applied: false).reverse_order(:created).first
+  unless db_action
+    event.respond 'Keine Aktion aufzuheben.'
+    return
+  end
+  now = Time.now.to_i
+  unless now - db_action[:created].to_i < config['undo_timeout']
+    event.respond 'Aktion zu alt.'
+    return
+  end
+
+  if db_action[:action] == 'insert'
+    DB.transaction do
+      payload = YAML::load db_action[:payload]
+      # gibt es die daten noch?
+      db_data = DB[payload[0][0]].where(id: payload[0][1]).first
+      unless db_data
+        event.respond 'Schon erledigt.'
+        return
+      end
+
+      # immer pruefen, ob datensatz noch da
+      # plus
+      # pruefen abhaengig von der payload
+      #
+      # keyword + definition/template
+      # alias dazu - alias_id und datum in keywords
+      # definition dazu - idkeyword und datum in definitions
+      # template dazu/geaendert - idkeyword und datum in templates
+      #
+      # definition
+      # weg - action delete und datum + tabelle und idkeyword gleich
+      #
+      db_added_alias, db_added_def, db_changed_tpl, removed_def = false, false, false, false
+      if payload.size > 1
+        db_added_alias = DB[:keywords].where(Sequel[:created] > db_action[:created].to_i).or(Sequel[:changed] > db_action[:created].to_i).where(alias_id: payload[0][1]).first
+        db_added_def = DB[:definitions].where(Sequel[:created] > payload[0][-2].to_i).or(Sequel[:changed] > payload[0][-1].to_i).where(idkeyword: payload[0][1]).first
+        db_changed_tpl = DB[:templates].where(Sequel[:created] > payload[0][-2].to_i).or(Sequel[:changed] > payload[0][-1].to_i).where(idkeyword: payload[0][1]).first
+      else
+        # todo
+        # hier pruefen, ob es nur noch eine defintion gibt
+        db_removed_def_set = DB[:actions].where(Sequel[:created] > db_action[:created].to_i).where(action: 'delete').exclude(iduser: user[:id])
+        db_removed_def_set.each do |row|
+          removed_payload = YAML::load row[:payload]
+          if removed_payload[0][0] == :definitions and removed_payload[0][4] == payload[0][4]
+            removed_def = true
+            break
+          end
+        end
+      end
+      if db_added_alias or db_added_def or db_changed_tpl or removed_def
+        event.respond 'Das geht nicht mehr.'
+        return
+      end
+
+      payload.each do |pl|
+        DB[pl[0]].where(id: pl[1]).delete
+      end
+    end
+
+  elsif db_action[:action] == 'update'
+    DB.transaction do
+      payload = YAML::load db_action[:payload]
+      if payload[0][0] == :keywords
+        db_data = DB[:keywords].where(id: payload[0][1]).first
+        unless db_data
+          event.respond 'Schon erledigt.'
+          return
+        end
+
+        # payload pruefen
+        # keyword geaendert - id und datum in keywords
+        db_changed_kw = DB[:keywords].where(Sequel[:created] > db_action[:created].to_i).or(Sequel[:changed] > db_action[:created].to_i).where(id: payload[0][1]).first
+        if db_changed_kw
+          event.respond 'Das geht nicht mehr.'
+          return
+        end
+
+        payload[0][6] = false unless payload[0][6]
+        DB[:keywords].where(id: payload[0][1]).update(primer: payload[0][5], hidden: payload[0][6], changed: now)
+        db_data = DB[:keywords].where(id: payload[0][1]).first
+
+      # gibt es die daten noch?
+      # unflexibel, weil dies wegen 'idkeyword' nur fuer updates von 'templates' funktioniert
+      # alternativ pruefen, ob es in 'actions' einen delete-eintrag fuer dieses idkeyword gibt.
+      elsif payload[0][0] == :templates
+        db_data = DB[payload[0][0]].where(idkeyword: payload[0][1]).first
+        unless db_data
+          event.respond 'Schon erledigt.'
+          return
+        end
+
+        # payload pruefen
+        # template geaendert - idkeyword und datum in templates
+        db_changed_tpl = DB[:templates].where(Sequel[:created] > db_action[:created].to_i).or(Sequel[:changed] > db_action[:created].to_i).where(idkeyword: payload[0][1]).first
+        if db_changed_tpl
+          event.respond 'Das geht nicht mehr.'
+          return
+        end
+
+        DB[payload[0][0]].where(idkeyword: payload[0][1]).update(object: payload[0][2], changed: now)
+
+      # payload pruefen
+      # gibt es das keyword noch?
+      # gibt es die eintraege noch?
+      # wurde sonst aenderungen an der definition vorgenommen, die in actions notiert sind?
+      elsif payload[0][0] == :definitions
+        payload.each do |pl|
+          db_definition = DB[:definitions].where(id: pl[1]).first
+          db_keyword = DB[:keywords].where(id: pl[4]).first
+          db_changed_def = DB[:actions].where(Sequel[:created] > db_action[:created].to_i).where(action: 'update').exclude(iduser: user[:id]).first
+          changed_def = false
+          if db_changed_def
+            changed_payload = YAML::load db_changed_def[:payload]
+            changed_payload.each do |cpl|
+              if cpl[0] == :definitions and cpl[4] == pl[4]
+                changed_def = true
+                break
+              end
+            end
+          end
+
+          unless db_definition and db_keyword and ! changed_def
+            event.respond 'Das geht nicht mehr.'
+            return
+          end
+        end
+
+        payload.each do |pl|
+          DB[:definitions].where(id: pl[1]).update(pinned: pl[5], created: pl[6], changed: pl[7])
+        end
+
+      end
+    end
+
+  elsif db_action[:action] == 'delete'
+    # keyword + definition
+    # keyword dazu
+    #
+    # definition
+    # keyword weg
+    #
+    # keyword + template
+    # keyword dazu
+    #
+    # alias
+    # eintrag mit gleichem namen vorhanden
+    # ehemaliges ziel-keyword weg
+
+    DB.transaction do
+      payload = YAML::load db_action[:payload]
+
+      #if payload.size > 1
+        # payload pruefen
+        # keyword darf inzwischen nicht als solches oder alias angelegt worden sein
+        db_added_same_kw_or_alias = false
+        payload.each do |pl|
+          if pl[0] == :keywords and DB[:keywords].where(name: pl[2]).or(alias_id: pl[2]).first
+            added_same_kw_or_alias = true
+            break
+          end
+        end
+      #else
+        # payload pruefen
+        # keyword muss noch da sein
+        db_keyword = DB[:keywords].where(id: payload[0][4]).first
+      #end
+
+      if db_added_same_kw_or_alias or ! db_keyword
+        event.respond 'Das geht nicht mehr.'
+        return
+      end
+
+      DB[payload[0][0]].insert(
+        id: payload[0][1],
+        name: payload[0][2],
+        iduser: payload[0][3],
+        alias_id: payload[0][4],
+        primer: payload[0][5],
+        hidden: payload[0][6],
+        created: payload[0][7],
+        changed: payload[0][8]
+      )
+    end
+
+  else
+
+  end
+
+  DB[:actions].where(id: db_action[:id]).update(applied: true)
+
+  event.respond 'Erledigt.'
 
 end
 
