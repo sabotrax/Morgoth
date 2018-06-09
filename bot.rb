@@ -1346,9 +1346,11 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
     event.respond 'Keine Aktion aufzuheben.'
     return
   end
+
+  # zeit ueberschritten
   now = Time.now.to_i
   unless now - db_action[:created].to_i < config['undo_timeout']
-    event.respond 'Aktion zu alt.'
+    event.respond 'Das geht nicht mehr.'
     return
   end
 
@@ -1358,7 +1360,7 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
       # gibt es die daten noch?
       db_data = DB[payload[0][0]].where(id: payload[0][1]).first
       unless db_data
-        event.respond 'Schon erledigt.'
+        event.respond 'Das geht nicht mehr.'
         return
       end
 
@@ -1407,7 +1409,7 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
       if payload[0][0] == :keywords
         db_data = DB[:keywords].where(id: payload[0][1]).first
         unless db_data
-          event.respond 'Schon erledigt.'
+          event.respond 'Das geht nicht mehr.'
           return
         end
 
@@ -1429,7 +1431,7 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
       elsif payload[0][0] == :templates
         db_data = DB[payload[0][0]].where(idkeyword: payload[0][1]).first
         unless db_data
-          event.respond 'Schon erledigt.'
+          event.respond 'Das geht nicht mehr.'
           return
         end
 
