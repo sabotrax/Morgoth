@@ -84,13 +84,30 @@ When used with --ksearch or a hashtag, it's showing keywords only.
 
 --ksearch - Search for keywords. %-wildcards are implicit, so 'string' is '%string%', but '%string' or 'string%' are different.
 
+NAME
+
+**~undefine - delete factoids**
+
+SYNOPSIS
+
+~undefine ( ( keyword | other-keyword | "just another" ) factoid-identifying numeral | ( --alias | --pin ) ( keyword | other-keyword | "just another" ) )
+
+DESCRIPTION
+
+Only one option is allowed at a time.
+The factiod-identifying numeral is the digit that is beeing displayed in parentheses right after the factoid when using ~whatis.
+
+--alias - Deletes an alias.
+
+--pin - Removes the factoid's accentuation.
+
 TBD.
 
 ### Getting things up and running for development
 
 (Provided you have a Ruby environment. If not, look [here](https://cbednarski.com/articles/installing-ruby/).)
 
-* After cloning the repository you might want to install the necessary Gems:
+* After cloning the repository you might want to cd into the directory and install the necessary Gems:
 
   `bundle install`
 
@@ -109,11 +126,6 @@ TBD.
 TBD.
 
 ### Caveats
-    
-The first bot master has to be created manually in the SQL database.
-In your SQLite client do `insert into users (discord_id, name, botmaster, enabled, created, changed) values (DISCORD_ID, 'DISCORD_NAME_W/O_THE_#_PART', 1, 1, UNIX_TIMESTAMP, UNIX_TIMESTAMP)`.
-
-Check with `~user --list`.
 
 The bot is not beeing translated yet and is only talking German.
 
