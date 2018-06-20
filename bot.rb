@@ -999,14 +999,19 @@ end
 # Listet Bot-Benutzer auf.
 #
 bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage: '~user --list | --add  Discord-User [Botmaster] | ( --enable | --disable  | --botmaster Discord-User )') do |event, *args|
-  # recht zum aufruf pruefen
-  user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
-  unless user
-    event.respond 'Nur Bot-Master dürfen das!'
-    return
-  end
+  # sonderregel fuer ersten benutzer
+  if DB[:users].first
+    # sonst recht zum aufruf pruefen
+    user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
+    unless user
+      event.respond 'Nur Bot-Master dürfen das!'
+      return
+    end
 
-  seen(event, user)
+    seen(event, user)
+  else
+    no_users = true
+  end
 
   cmd = args.shift
 
@@ -1042,7 +1047,9 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
       return
     end
 
-    if args[1]&.downcase == "botmaster"
+
+    # der erste benutzer bei "no_users" ist immer botmaster
+    if args[1]&.downcase == "botmaster" or no_users
       new_user['botmaster'] = 1
     else
       new_user['botmaster'] = 0
