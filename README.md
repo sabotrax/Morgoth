@@ -11,7 +11,7 @@ Features:
 * Search, show latest and display random keywords.
 * Create aliases and hashtags.
 * User management.
-* Greeting new users with configurable in-bot messages.
+* Greeting new users with configurable messages.
 * Download the bot's database on the fly.
 * Rolling dice.
 
@@ -46,9 +46,9 @@ So there's also a fixed data template for the ships and vehicles in Star Citizen
 User access:
 
 There are three levels of access control.  
-Everybody on the Discord server can execute non-writing bot commands. Like ~whatis, ~latest or ~about.  
-Only users known to the bot (called bot users) can execute writing commands. Like ~define or ~undefine.  
-Then there are bot masters. They're the administrators of the bot.
+Everybody on the Discord server can execute non-writing bot commands, like asking for stuff.  
+Only users known to the bot (called bot users) can execute writing commands, like defining new factoids.  
+Then there are bot masters.
 
 Commands:
 
@@ -130,6 +130,18 @@ SYNOPSIS
 DESCRIPTION
 
 Displays various information about the bot.
+
+NAME
+
+**~roll - rolling dice**
+
+SYNOPSIS
+
+~roll [ 1 - 9 ( d | w ) 1 - 999 ]
+
+DESCRIPTION
+
+Roll the dice up to 9d999. Default is 1d6.
 
 TBD.
 
