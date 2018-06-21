@@ -40,9 +40,15 @@ Dwarf Fortress
 Overview:
 
 The bot's primary job is to store and display factoids. A factoid is made up of a keyword and some text.  
-Everybody on the Discord server can execute non-writing bot commands, like asking the bot about stuff.  
-Only users known to the bot can execute writing commands, like adding new stuff or creating aliases.  
-Users known as bot masters can elevate others.
+Since users can choose keywords and text freely, the resulting factoid is unstructured data.
+So there's also a fixed data template for the ships and vehicles in Star Citizen, so information can be stored consistently.
+
+User access:
+
+There are three levels of access control.  
+Everybody on the Discord server can execute non-writing bot commands. Like ~whatis, ~latest or ~about.  
+Only users known to the bot (called bot users) can execute writing commands. Like ~define or ~undefine.  
+Then there are bot masters. They're the administrators of the bot.
 
 Commands:
 
@@ -100,6 +106,30 @@ The factiod-identifying numeral is the digit that is beeing displayed in parenth
 --alias - Deletes an alias.
 
 --pin - Removes the factoid's accentuation.
+
+NAME
+
+**~latest - show latest entries**
+
+SYNOPSIS
+
+~latest
+
+DESCRIPTION
+
+Shows the last modified keywords. The number of the keywords shown is configurable.
+
+NAME
+
+**~about - display information**
+
+SYNOPSIS
+
+~about
+
+DESCRIPTION
+
+Displays various information about the bot.
 
 TBD.
 
