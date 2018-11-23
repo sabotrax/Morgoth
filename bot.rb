@@ -1195,7 +1195,7 @@ end
 # Anzahl der Wuerfe mal Seitenzahl.
 # Standard ist 1d6.
 #
-bot.command([:wuerfeln, :roll], description: 'Würfelt bis 9d999.', usage: '~wuerfeln [ 1-9 ( d | w ) 1-999 ]') do |event, *args|
+bot.command([:wuerfeln, :roll], description: 'Würfelt bis 9d999.', usage: '~wuerfeln [ 1 - 9 ( d | w ) 1 - 999 ]') do |event, *args|
   seen(event)
 
   args.push '1d6' unless args.any?
@@ -1330,7 +1330,8 @@ bot.command([:tagszeigen, :showtags], description: 'Zeigt alle Hashtags.', usage
 
 end
 
-# macht bestimmte aktionen waehrend einer begrenzten zeitspanne rueckgaengig
+# Macht bestimmte Aktionen waehrend einer begrenzten Zeitspanne rueckgaengig
+# Nur Bot-User.
 #
 bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. Funktioniert für 30 s nach der Aktion.', usage: '~undo') do |event, *args|
   # recht zum aufruf pruefen
