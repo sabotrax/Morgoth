@@ -85,6 +85,13 @@ DB.create_table? :actions do
   TrueClass :applied, default: false
   String :created
 end
+DB.create_table? :diaries do
+  primary_key :id
+  Integer :iduser
+  String :entry, text: true
+  Time :created
+  Time :changed
+end
 
 bot = Discordrb::Commands::CommandBot.new token: config['bot_token'], client_id: config['bot_client_id'], prefix: config['bot_prefix'], help_command: [:hilfe, :help]
 
@@ -146,7 +153,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     if db_definition.any?
       keyword_names = []
       db_definition.each do |k|
-	keyword_names.push k[:name]
+	      keyword_names.push k[:name]
       end
       event << 'Hinweis: bereits definiert als'
       formatter(keyword_names).each {|line| event << line }
@@ -156,22 +163,22 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     # neues keyword + eintrag
     unless old_keyword
       DB.transaction do
-	id_kw = idkeyword = DB[:keywords].insert(
-	  name: keyword,
-	  iduser: user[:id],
+	      id_kw = idkeyword = DB[:keywords].insert(
+	        name: keyword,
+	        iduser: user[:id],
           hidden: cmd == '--hidden' ? true : false,
-	  created: now,
-	  changed: now
-	)
+	        created: now,
+	        changed: now
+	      )
 
-	id_df = DB[:definitions].insert(
-	  definition: targs.join(' '),
-	  iduser: user[:id],
-	  idkeyword: idkeyword,
+	      id_df = DB[:definitions].insert(
+	        definition: targs.join(' '),
+	        iduser: user[:id],
+	        idkeyword: idkeyword,
           pinned: false,
-	  created: now,
-	  changed: now
-	)
+	        created: now,
+	        changed: now
+	      )
 
         # fuer undo merken
         action = [
@@ -191,9 +198,9 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
       # alias aufloesen
       if old_keyword[:alias_id]
-	idkeyword = old_keyword[:alias_id]
+	      idkeyword = old_keyword[:alias_id]
       else
-	idkeyword = old_keyword[:id]
+	      idkeyword = old_keyword[:id]
       end
 
       # problem
@@ -246,12 +253,12 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       unless db_template and attribute
         DB.transaction do
           id = DB[:definitions].insert(
-	    definition: targs.join(' '),
-	    iduser: user[:id],
-	    idkeyword: idkeyword,
+	          definition: targs.join(' '),
+	          iduser: user[:id],
+	          idkeyword: idkeyword,
             pinned: false,
-	    created: now,
-	    changed: now
+	          created: now,
+	          changed: now
           )
 
           # fuer undo merken
@@ -426,13 +433,13 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       # in undo aufnehmen
       unless db_keyword
         DB.transaction do
-	  idkeyword = DB[:keywords].insert(
-	    name: keyword,
-	    iduser: user[:id],
+	        idkeyword = DB[:keywords].insert(
+	          name: keyword,
+	          iduser: user[:id],
             hidden: false,
-	    created: now,
-	    changed: now
-	  )
+	          created: now,
+	          changed: now
+	        )
 
           DB[:templates].insert(
             idkeyword: idkeyword,
@@ -440,7 +447,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
             created: now,
             changed: now
           )
-        end
+      end
 
       # keyword vorhanden, template dazu
       # TODO
@@ -516,7 +523,7 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     definition_set.reverse_order(:pinned).order(:created).each do |definition|
       i += 1
       if targs[0].to_i == i
-	db_definition = definition
+	      db_definition = definition
       end
       if definition[:pinned] == true
         db_pinned_definition = definition
@@ -728,13 +735,13 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
 
       # aliase aufloesen
       if db_k[:alias_id]
-	db_orig_keyword = DB[:keywords].where(id: db_k[:alias_id]).first
+	      db_orig_keyword = DB[:keywords].where(id: db_k[:alias_id]).first
 
-	# bei alias auch original anzeigen
-	kw_names.push "#{db_k[:name]} (#{db_orig_keyword[:name]})"
+	      # bei alias auch original anzeigen
+	      kw_names.push "#{db_k[:name]} (#{db_orig_keyword[:name]})"
 
       else
-	kw_names.push db_k[:name]
+	      kw_names.push db_k[:name]
       end
 
     end
@@ -1127,16 +1134,16 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
     unless en_users.empty?
       event << "User:"
       en_users.each do |user|
-	botmaster = user[:botmaster] ? ", Botmaster" : ""
-	event << user[:name] + botmaster
+	      botmaster = user[:botmaster] ? ", Botmaster" : ""
+	      event << user[:name] + botmaster
       end
     end
 
     unless dis_users.empty?
       event << "Inaktive:"
       dis_users.each do |user|
-	botmaster = user[:botmaster] ? ", Botmaster" : ""
-	event << user[:name] + botmaster
+	      botmaster = user[:botmaster] ? ", Botmaster" : ""
+	      event << user[:name] + botmaster
       end
     end
 
@@ -1543,6 +1550,70 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
   DB[:actions].where(id: db_action[:id]).update(applied: true)
 
   event.respond 'Erledigt.'
+
+end
+
+bot.command([:log], description: '', usage: '') do |event, *args|
+  # recht zum aufruf pruefen
+  user = DB[:users].where(discord_id: event.user.id, enabled: true).first
+  unless user
+    event.respond 'Nur Bot-User dürfen das!'
+    return
+  end
+
+  seen(event, user)
+
+  cmd = args.shift if args[0] =~ /^--/
+
+  targs = tokenize(args)
+
+  # eintrag speichern
+  if cmd.nil?
+    if targs.empty?
+      event.respond 'Fehlerhafter Aufruf.'
+      return
+    end
+
+    # eintrag speichern
+    now = Time.now.to_i
+    DB.transaction do
+      DB[:diaries].insert(
+        iduser: user[:id],
+        entry: targs.join(' '),
+        created: now,
+        changed: now
+        )
+    end
+
+    event.respond 'Erledigt.'
+
+  # --last
+  elsif cmd == '--last'
+    if targs.size > 0 and targs[0] !~ /^[1-9]\d?$/i
+      event.respond 'Fehlerhafter Aufruf.'
+      return
+    end
+
+    anzahl = targs.shift
+    anzahl = 5 unless anzahl
+
+    diary_set = DB[:diaries].where(iduser: user[:id]).reverse_order(:created).limit(anzahl)
+    diary_set.each do |row|
+      created = Time.at(row[:created].to_i)
+      event << "#{created.strftime('%d.%m.%y %H:%M')} #{row[:entry]}"
+    end
+
+    if diary_set.empty?
+      event << 'Es gibt keine Einträge.'
+      event << 'Das ist ein bisschen traurig.'
+    end
+
+    return
+
+  # unbekannte option
+  else
+    event.respond 'Unbekannte Option.'
+  end
 
 end
 
