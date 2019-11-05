@@ -21,180 +21,178 @@
 #
 
 class Ship
-
   @@config = {
     length: {
-      name: 'Länge',
-      short_name: '^(?:länge|laenge|lang)$',
+      name: "Länge",
+      short_name: "^(?:länge|laenge|lang)$",
       type: '^[1-9]\d{,3}(?:(?:,|\.)\d{1,2})?$',
-      err_msg:  'Länge in Meter von 1 bis 9999 angeben.'
+      err_msg: "Länge in Meter von 1 bis 9999 angeben.",
     },
     beam: {
-      name: 'Breite',
-      short_name: '^(?:breite|breit)$',
+      name: "Breite",
+      short_name: "^(?:breite|breit)$",
       type: '^[1-9]\d{,2}(?:(?:,|\.)\d{1,2})?$',
-      err_msg:  'Breite in Meter von 1 bis 999 angeben.',
+      err_msg: "Breite in Meter von 1 bis 999 angeben.",
     },
     height: {
-      name: 'Höhe',
-      short_name: '^(?:höhe|hoehe|hoch)$',
+      name: "Höhe",
+      short_name: "^(?:höhe|hoehe|hoch)$",
       type: '^[1-9]\d{,2}(?:(?:,|\.)\d{1,2})?$',
-      err_msg:  'Höhe in Meter von 1 bis 999 angeben.',
+      err_msg: "Höhe in Meter von 1 bis 999 angeben.",
     },
     mass: {
-      name: 'Masse',
-      short_name: '^(?:masse|gewicht|schwer)$',
+      name: "Masse",
+      short_name: "^(?:masse|gewicht|schwer)$",
       type: '^[1-9]\d{,6}(?:(?:,|\.)\d{1,2})?$',
-      err_msg:  'Masse in Kilogramm von 1 bis 9999999 angeben.',
-      source: :local
+      err_msg: "Masse in Kilogramm von 1 bis 9999999 angeben.",
+      source: :local,
     },
     size: {
-      name: 'Größe',
-      short_name: '^(?:größe|groesse|groß)$',
-      type: '^(?:(?:K|k)lein|(?:M|m)ittel|(:?G|g)roß|(?:C|c)apital)$',
-      err_msg:  'Größe angeben in Klein, Mittel, Groß oder Capital.',
-      source: :local
+      name: "Größe",
+      short_name: "^(?:größe|groesse|groß)$",
+      type: "^(?:(?:K|k)lein|(?:M|m)ittel|(:?G|g)roß|(?:C|c)apital)$",
+      err_msg: "Größe angeben in Klein, Mittel, Groß oder Capital.",
+      source: :local,
     },
     min_crew: {
-      name: 'mind. Crew',
+      name: "mind. Crew",
       short_name: '^(?:mind\.? crew|mincrew|mindestcrew)$',
       type: '^[1-9]\d{,2}$',
-      err_msg:  'Crew in Personen von 1 bis 999 angeben.',
-      source: :local
+      err_msg: "Crew in Personen von 1 bis 999 angeben.",
+      source: :local,
     },
     max_crew: {
-      name: 'max. Crew',
+      name: "max. Crew",
       short_name: '^(?:max\.? crew|maxcrew|maximalcrew)$',
       type: '^[1-9]\d{,2}$',
-      err_msg:  'Crew in Personen von 1 bis 999 angeben.',
-      source: :local
+      err_msg: "Crew in Personen von 1 bis 999 angeben.",
+      source: :local,
     },
     cargo: {
-      name: 'Fracht',
-      short_name: '^(?:fracht|cargo)$',
+      name: "Fracht",
+      short_name: "^(?:fracht|cargo)$",
       type: '^[1-9]\d{,4}$',
-      err_msg:  'Fracht in SCU von 1 bis 99999 angeben.',
-      source: :local
+      err_msg: "Fracht in SCU von 1 bis 99999 angeben.",
+      source: :local,
     },
     scm_speed: {
-      name: 'SCM',
-      short_name: '^scm$',
+      name: "SCM",
+      short_name: "^scm$",
       type: '^[1-9]\d{,2}$',
-      err_msg:  'SCM in ms/s von 1 bis 999 angeben.',
-      source: :local
+      err_msg: "SCM in ms/s von 1 bis 999 angeben.",
+      source: :local,
     },
     ab_speed: {
-      name: 'AB',
-      short_name: '^(?:ab|afterburner)$',
+      name: "AB",
+      short_name: "^(?:ab|afterburner)$",
       type: '^[1-9]\d{,3}$',
-      err_msg:  'AB in ms/s von 1 bis 9999 angeben.',
-      source: :local
+      err_msg: "AB in ms/s von 1 bis 9999 angeben.",
+      source: :local,
     },
     weapons: {
-      name: 'Waffen',
-      short_name: '^(?:waffen|hardpoints)$',
+      name: "Waffen",
+      short_name: "^(?:waffen|hardpoints)$",
       type: '[1-9]\d? S[1-9]\d?(?: (?=\d))?',
-      err_msg:  'Waffen so angeben: "4 S3" oder "2 S3 2 S1".',
-      source: :local
+      err_msg: 'Waffen so angeben: "4 S3" oder "2 S3 2 S1".',
+      source: :local,
     },
     turrets: {
-      name: 'Türme',
-      short_name: '^(?:türme|tuerme|turrets)$',
+      name: "Türme",
+      short_name: "^(?:türme|tuerme|turrets)$",
       type: '[1-9]\d? (?:S|s)[1-9]\d?(?: (?:à|a|je|je zu|zu je) [1-9]\d?)?',
-      err_msg:  'Türme so angeben: "4 S3", "5 S2 à 2" oder "2 S3 2 S1".',
-      source: :local
+      err_msg: 'Türme so angeben: "4 S3", "5 S2 à 2" oder "2 S3 2 S1".',
+      source: :local,
     },
     missiles: {
-      name: 'Raketen',
-      short_name: '^(?:raketen|torpedos|missiles)$',
+      name: "Raketen",
+      short_name: "^(?:raketen|torpedos|missiles)$",
       type: '[1-9]\d? (?:S|s)[1-9]\d?(?: (?:à|a|je|je zu|zu je) [1-9]\d?)?',
-      err_msg:  'Raketen so angeben: "4 S3", "3 S3 à 8" oder "2 S3 2 S1".',
-      source: :local
+      err_msg: 'Raketen so angeben: "4 S3", "3 S3 à 8" oder "2 S3 2 S1".',
+      source: :local,
     },
     utility_items: {
-      name: 'Werkzeugplätze',
-      short_name: '^(?:werkzeuge|utily items)$',
+      name: "Werkzeugplätze",
+      short_name: "^(?:werkzeuge|utily items)$",
       type: '[1-9]\d? S[1-9]\d?(?: (?=\d))?',
-      err_msg:  'Werkzeuge so angeben: "4 S3" oder "2 S3 2 S1".',
-      source: :local
+      err_msg: 'Werkzeuge so angeben: "4 S3" oder "2 S3 2 S1".',
+      source: :local,
     },
   }
 
   def initialize(arg = {})
     unless arg.is_a? Hash
-      raise ArgumentError, 'Argument is not a Hash'
+      raise ArgumentError, "Argument is not a Hash"
     end
 
     @length = {
-      value:  arg[:length] || 0,
-      source: arg[:source]&.to_sym || :local
+      value: arg[:length] || 0,
+      source: arg[:source]&.to_sym || :local,
     }
 
     @beam = {
-      value:  arg[:beam] || 0,
-      source: arg[:source]&.to_sym || :local
+      value: arg[:beam] || 0,
+      source: arg[:source]&.to_sym || :local,
     }
 
     @height = {
-      value:  arg[:height] || 0,
-      source: arg[:source]&.to_sym || :local
+      value: arg[:height] || 0,
+      source: arg[:source]&.to_sym || :local,
     }
 
     @mass = {
-      value:  arg[:mass] || 0,
-      source: arg[:source]&.to_sym || :local
+      value: arg[:mass] || 0,
+      source: arg[:source]&.to_sym || :local,
     }
 
     @size = {
-      value:  arg[:size] || 'Klein',
-      source: arg[:source]&.to_sym || :local
+      value: arg[:size] || "Klein",
+      source: arg[:source]&.to_sym || :local,
     }
 
     @min_crew = {
-      value:  arg[:min_crew] || 0,
-      source: arg[:source]&.to_sym || :local
+      value: arg[:min_crew] || 0,
+      source: arg[:source]&.to_sym || :local,
     }
 
     @max_crew = {
-      value:  arg[:max_crew] || 0,
-      source: arg[:source]&.to_sym || :local
+      value: arg[:max_crew] || 0,
+      source: arg[:source]&.to_sym || :local,
     }
 
     @cargo = {
-      value:  arg[:cargo] || 0,
-      source: arg[:source]&.to_sym || :local
+      value: arg[:cargo] || 0,
+      source: arg[:source]&.to_sym || :local,
     }
 
     @scm_speed = {
-      value:  arg[:scm_speed] || 0,
-      source: arg[:source]&.to_sym || :local
+      value: arg[:scm_speed] || 0,
+      source: arg[:source]&.to_sym || :local,
     }
 
     @ab_speed = {
-      value:  arg[:ab_speed] || 0,
-      source: arg[:source]&.to_sym || :local
+      value: arg[:ab_speed] || 0,
+      source: arg[:source]&.to_sym || :local,
     }
 
     @weapons = {
-      value:  arg[:weapons] || 0,
-      source: arg[:source]&.to_sym || :local
+      value: arg[:weapons] || 0,
+      source: arg[:source]&.to_sym || :local,
     }
 
     @turrets = {
-      value:  arg[:turrets] || 0,
-      source: arg[:source]&.to_sym || :local
+      value: arg[:turrets] || 0,
+      source: arg[:source]&.to_sym || :local,
     }
 
     @missiles = {
-      value:  arg[:missiles] || 0,
-      source: arg[:source]&.to_sym || :local
+      value: arg[:missiles] || 0,
+      source: arg[:source]&.to_sym || :local,
     }
 
     @utility_items = {
-      value:  arg[:utility_items] || 0,
-      source: arg[:source]&.to_sym || :local
+      value: arg[:utility_items] || 0,
+      source: arg[:source]&.to_sym || :local,
     }
-
   end
 
   def length?
@@ -342,8 +340,8 @@ class Ship
       end
     end
 
-    t.tr!('s', 'S')
-    t.gsub!(/(à|a|je zu|zu je|je)/, 'à')
+    t.tr!("s", "S")
+    t.gsub!(/(à|a|je zu|zu je|je)/, "à")
 
     @turrets[:value] = t
   end
@@ -361,8 +359,8 @@ class Ship
       end
     end
 
-    m.tr!('s', 'S')
-    m.gsub!(/(à|a|je zu|zu je|je)/, 'à')
+    m.tr!("s", "S")
+    m.gsub!(/(à|a|je zu|zu je|je)/, "à")
 
     @missiles[:value] = m
   end
@@ -396,18 +394,15 @@ class Ship
     # nach passender variable suchen..
     attribute = false
     self.instance_variables.each do |iv|
-
-      iv_literal = iv.to_s.tr('@', '')
-      targs.each {|token| token.delete! '"'}
+      iv_literal = iv.to_s.tr("@", "")
+      targs.each { |token| token.delete! '"' }
       if @@config.has_key?(iv_literal.to_sym) and targs[0] =~ /#{@@config[iv_literal.to_sym][:short_name]}/i
-        raise ArgumentError, 'Fehlerhafter Aufruf.' unless targs[1]
+        raise ArgumentError, "Fehlerhafter Aufruf." unless targs[1]
         self.send iv_literal, targs[1]
         attribute = true
       end
-
     end
 
-    raise TemplateArgumentError, 'Eigenschaft unbekannt.' unless attribute
+    raise TemplateArgumentError, "Eigenschaft unbekannt." unless attribute
   end
-
 end

@@ -20,23 +20,23 @@
 # along with Morgoth.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-require 'discordrb'
-require 'json'
-require 'sequel'
-require 'yaml'
-require 'rufus/scheduler'
-require 'adsf'
-require 'securerandom'
-require 'zlib'
-require 'net/http'
+require "discordrb"
+require "json"
+require "sequel"
+require "yaml"
+require "rufus/scheduler"
+require "adsf"
+require "securerandom"
+require "zlib"
+require "net/http"
 
-require_relative 'helper'
-require_relative 'ship'
+require_relative "helper"
+require_relative "ship"
 
-cfile = File.read('config.json')
+cfile = File.read("config.json")
 config = JSON.parse(cfile)
 
-DB = Sequel.connect('sqlite://db/bot.db')
+DB = Sequel.connect("sqlite://db/bot.db")
 DB.create_table? :users do
   primary_key :id
   Integer :discord_id
@@ -93,7 +93,7 @@ DB.create_table? :diaries do
   Time :changed
 end
 
-bot = Discordrb::Commands::CommandBot.new token: config['bot_token'], client_id: config['bot_client_id'], prefix: config['bot_prefix'], help_command: [:hilfe, :help]
+bot = Discordrb::Commands::CommandBot.new token: config["bot_token"], client_id: config["bot_client_id"], prefix: config["bot_prefix"], help_command: [:hilfe, :help]
 
 # Schreibt in die Begriffs-Datenbank.
 # Nur Bot-User.
@@ -114,11 +114,11 @@ bot = Discordrb::Commands::CommandBot.new token: config['bot_token'], client_id:
 # --pin Begriff Ziffer
 # Pinnt Eintrag des Begriffs unter Angabe der Ziffer aus wasist.
 #
-bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ein.', usage: '~merke ( ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung | [ --alias Alias Begriff | --hidden | --primer Begriff ( true | false ) | --pin Begriff Klammer-Ziffer aus ~wasist ] )') do |event, *args|
+bot.command([:merke, :define], description: "Trägt in die Begriffs-Datenbank ein.", usage: '~merke ( ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung | [ --alias Alias Begriff | --hidden | --primer Begriff ( true | false ) | --pin Begriff Klammer-Ziffer aus ~wasist ] )') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
-    event.respond 'Nur Bot-User dürfen das!'
+    event.respond "Nur Bot-User dürfen das!"
     return
   end
 
@@ -128,79 +128,79 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
 
   targs = tokenize(args)
 
-  if cmd.nil? or cmd == '--hidden'
+  if cmd.nil? or cmd == "--hidden"
     keyword = targs.shift
     keyword.delete! '"'
     if targs.empty?
-      event.respond 'Fehlerhafter Aufruf.'
+      event.respond "Fehlerhafter Aufruf."
       return
     end
     if keyword =~ /^#/
-      event.respond 'Begriffe können keine Hashtags sein.'
+      event.respond "Begriffe können keine Hashtags sein."
       return
     end
 
     # gibt es das keyword schon?
-    old_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
-    if old_keyword and cmd == '--hidden'
-      event.respond 'Kann nur neue Einträge verstecken.'
+    old_keyword = DB[:keywords].where({ Sequel.function(:upper, :name) => Sequel.function(:upper, keyword) }).first
+    if old_keyword and cmd == "--hidden"
+      event.respond "Kann nur neue Einträge verstecken."
       return
     end
 
     # hinweis auf mehrfache definitionen
-    definition = targs.join(' ')
-    db_definition = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where({Sequel.function(:upper, :definition) => Sequel.function(:upper, definition)}).where(hidden: false)
+    definition = targs.join(" ")
+    db_definition = DB[:keywords].select(:name).join(:definitions, :idkeyword => :id).where({ Sequel.function(:upper, :definition) => Sequel.function(:upper, definition) }).where(hidden: false)
     if db_definition.any?
       keyword_names = []
       db_definition.each do |k|
-	      keyword_names.push k[:name]
+        keyword_names.push k[:name]
       end
-      event << 'Hinweis: bereits definiert als'
-      formatter(keyword_names).each {|line| event << line }
+      event << "Hinweis: bereits definiert als"
+      formatter(keyword_names).each { |line| event << line }
     end
 
     now = Time.now.to_i
     # neues keyword + eintrag
     unless old_keyword
       DB.transaction do
-	      id_kw = idkeyword = DB[:keywords].insert(
-	        name: keyword,
-	        iduser: user[:id],
-          hidden: cmd == '--hidden' ? true : false,
-	        created: now,
-	        changed: now
-	      )
+        id_kw = idkeyword = DB[:keywords].insert(
+          name: keyword,
+          iduser: user[:id],
+          hidden: cmd == "--hidden" ? true : false,
+          created: now,
+          changed: now,
+        )
 
-	      id_df = DB[:definitions].insert(
-	        definition: targs.join(' '),
-	        iduser: user[:id],
-	        idkeyword: idkeyword,
+        id_df = DB[:definitions].insert(
+          definition: targs.join(" "),
+          iduser: user[:id],
+          idkeyword: idkeyword,
           pinned: false,
-	        created: now,
-	        changed: now
-	      )
+          created: now,
+          changed: now,
+        )
 
         # fuer undo merken
         action = [
-          [ :keywords, id_kw, keyword, user[:id], cmd == '--hidden' ? true : false, now, now ],
-          [ :definitions, id_df, targs.join(' '),  user[:id], idkeyword, false, now, now ]
+          [:keywords, id_kw, keyword, user[:id], cmd == "--hidden" ? true : false, now, now],
+          [:definitions, id_df, targs.join(" "), user[:id], idkeyword, false, now, now],
         ]
         DB[:actions].insert(
           iduser: user[:id],
-          action: 'insert',
+          action: "insert",
           payload: YAML::dump(action),
-          created: now
+          created: now,
         )
       end
 
-    # weiterer eintrag zum vorhandenen keyword
+      # weiterer eintrag zum vorhandenen keyword
     else
 
       # alias aufloesen
       if old_keyword[:alias_id]
-	      idkeyword = old_keyword[:alias_id]
+        idkeyword = old_keyword[:alias_id]
       else
-	      idkeyword = old_keyword[:id]
+        idkeyword = old_keyword[:id]
       end
 
       # problem
@@ -216,13 +216,13 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
         begin
           object.fill targs
 
-        # falsches/unbekanntes attribut
-        # es koennte aber auch eine normale defintion sein,
-        # deswegen unten weiter
+          # falsches/unbekanntes attribut
+          # es koennte aber auch eine normale defintion sein,
+          # deswegen unten weiter
         rescue TemplateArgumentError => e
           attribute = false
 
-        # wert des attributs falsch
+          # wert des attributs falsch
         rescue ArgumentError => e
           event.respond e.message
           return
@@ -233,54 +233,53 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
             # fuer undo merken
             db_data = DB[:templates].where(idkeyword: db_template[:idkeyword]).first
             action = [
-              [ :templates, db_data[:idkeyword], db_data[:object], db_data[:created], db_data[:changed] ]
+              [:templates, db_data[:idkeyword], db_data[:object], db_data[:created], db_data[:changed]],
             ]
             DB[:actions].insert(
               iduser: user[:id],
-              action: 'update',
+              action: "update",
               payload: YAML::dump(action),
-              created: now
+              created: now,
             )
 
             sobject = YAML::dump(object)
             DB[:templates].where(idkeyword: db_template[:idkeyword]).update(object: sobject, changed: now)
           end
         end
-
       end
 
       # normale definition
       unless db_template and attribute
         DB.transaction do
           id = DB[:definitions].insert(
-	          definition: targs.join(' '),
-	          iduser: user[:id],
-	          idkeyword: idkeyword,
+            definition: targs.join(" "),
+            iduser: user[:id],
+            idkeyword: idkeyword,
             pinned: false,
-	          created: now,
-	          changed: now
+            created: now,
+            changed: now,
           )
 
           # fuer undo merken
           action = [
-            [ :definitions, id, targs.join(' '),  user[:id], idkeyword, false, now, now ]
+            [:definitions, id, targs.join(" "), user[:id], idkeyword, false, now, now],
           ]
           DB[:actions].insert(
             iduser: user[:id],
-            action: 'insert',
+            action: "insert",
             payload: YAML::dump(action),
-            created: now
+            created: now,
           )
         end
       end
     end
 
-    event << 'Erledigt.'
+    event << "Erledigt."
 
-  # alias
+    # alias
   elsif cmd == "--alias"
     if targs.size < 2
-      event.respond 'Fehlerhafter Aufruf.'
+      event.respond "Fehlerhafter Aufruf."
       return
     end
 
@@ -290,20 +289,20 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     target.delete! '"'
 
     # alias darf nicht vorhanden sein
-    link_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, link)}).first
+    link_keyword = DB[:keywords].where({ Sequel.function(:upper, :name) => Sequel.function(:upper, link) }).first
     if link_keyword
-      event.respond 'Alias bereits vorhanden.'
+      event.respond "Alias bereits vorhanden."
       return
     end
-    
+
     # ziel muss vorhanden sein, aber selbst kein alias
-    target_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, target)}).first
+    target_keyword = DB[:keywords].where({ Sequel.function(:upper, :name) => Sequel.function(:upper, target) }).first
     unless target_keyword
-      event.respond 'Ziel-Begriff nicht vorhanden.'
+      event.respond "Ziel-Begriff nicht vorhanden."
       return
     end
     if target_keyword[:alias_id]
-      event.respond 'Ziel-Begriff ist Alias, aber muss Begriff sein.'
+      event.respond "Ziel-Begriff ist Alias, aber muss Begriff sein."
       return
     end
 
@@ -316,32 +315,32 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
         alias_id: target_keyword[:id],
         hidden: target_keyword[:hidden] == true ? true : false,
         created: now,
-        changed: now
+        changed: now,
       )
 
       # fuer undo merken
       action = [
-        [ :keywords, id_kw, link, user[:id], target_keyword[:hidden] == true ? true : false, now, now ]
+        [:keywords, id_kw, link, user[:id], target_keyword[:hidden] == true ? true : false, now, now],
       ]
       DB[:actions].insert(
         iduser: user[:id],
-        action: 'insert',
+        action: "insert",
         payload: YAML::dump(action),
-        created: now
+        created: now,
       )
     end
 
-    event.respond 'Erledigt.'
+    event.respond "Erledigt."
 
-  # primer
+    # primer
   elsif cmd == "--primer"
     unless user[:botmaster]
-      event.respond 'Nur Bot-Master dürfen das!'
+      event.respond "Nur Bot-Master dürfen das!"
       return
     end
 
     if targs.size < 2 or targs[1] !~ /^(?:true|false)$/i
-      event.respond 'Fehlerhafter Aufruf.'
+      event.respond "Fehlerhafter Aufruf."
       return
     end
 
@@ -349,24 +348,24 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     keyword.delete! "\""
 
     # begriff bekannt?
-    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
+    db_keyword = DB[:keywords].where({ Sequel.function(:upper, :name) => Sequel.function(:upper, keyword) }).first
     unless db_keyword
-      event.respond 'Unbekannt.'
+      event.respond "Unbekannt."
       return
     end
     if db_keyword[:hidden]
-      event.respond 'Begriff darf nicht versteckt sein.'
+      event.respond "Begriff darf nicht versteckt sein."
       return
     end
 
     # alias aufloesen
     id = db_keyword[:id]
     if db_keyword[:alias_id]
-      event.respond 'Hinweis: Alias aufgelöst, --primer wird auf Original angewendet.'
+      event.respond "Hinweis: Alias aufgelöst, --primer wird auf Original angewendet."
       id = db_keyword[:alias_id]
     end
 
-    if targs[0].downcase == 'true'
+    if targs[0].downcase == "true"
       primer = true
     else
       primer = false
@@ -376,56 +375,56 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       # fuer undo merken
       db_data = DB[:keywords].where(id: id).first
       action = [
-        [ :keywords, db_data[:id], db_data[:name], db_data[:iduser], db_data[:alias_id], db_data[:primer], db_data[:hidden], db_data[:created].to_i, db_data[:changed].to_i ]
+        [:keywords, db_data[:id], db_data[:name], db_data[:iduser], db_data[:alias_id], db_data[:primer], db_data[:hidden], db_data[:created].to_i, db_data[:changed].to_i],
       ]
       DB[:actions].insert(
         iduser: user[:id],
-        action: 'update',
+        action: "update",
         payload: YAML::dump(action),
-        created: Time.now.to_i
+        created: Time.now.to_i,
       )
 
       DB[:keywords].where(id: id).update(primer: primer)
     end
 
-    event.respond 'Erledigt.'
+    event.respond "Erledigt."
 
-  # template
+    # template
   elsif cmd == "--template"
     if targs.size < 3 or targs[2] !~ /^(?:true|false)$/i
-      event.respond 'Fehlerhafter Aufruf.'
+      event.respond "Fehlerhafter Aufruf."
       return
     end
 
     unless targs[1] =~ /^ship$/i
-      event.respond 'Unbekannte Vorlage.'
+      event.respond "Unbekannte Vorlage."
       return
     end
 
     keyword = targs.shift || ""
     keyword.delete! "\""
 
-    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
+    db_keyword = DB[:keywords].where({ Sequel.function(:upper, :name) => Sequel.function(:upper, keyword) }).first
     if db_keyword and db_keyword[:alias_id]
-      event.respond 'Begriff ist Alias, aber muss Begriff sein.'
+      event.respond "Begriff ist Alias, aber muss Begriff sein."
       return
     end
 
     # hinweis
     # nur ein template pro keyword - im gegensatz zu unten
-    if db_keyword and targs[1].downcase == 'true' and DB[:templates].where(idkeyword: db_keyword[:id]).first
-      event.respond 'Vorlage bereits zugeordnet.'
+    if db_keyword and targs[1].downcase == "true" and DB[:templates].where(idkeyword: db_keyword[:id]).first
+      event.respond "Vorlage bereits zugeordnet."
       return
     end
 
     object = false
-    if targs[0].downcase == 'ship'
+    if targs[0].downcase == "ship"
       object = Ship.new
     end
     sobject = YAML::dump(object)
 
     # template anlegen
-    if targs[1].downcase == 'true'
+    if targs[1].downcase == "true"
       now = Time.now.to_i
 
       # neues keyword + template
@@ -433,37 +432,37 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       # in undo aufnehmen
       unless db_keyword
         DB.transaction do
-	        idkeyword = DB[:keywords].insert(
-	          name: keyword,
-	          iduser: user[:id],
+          idkeyword = DB[:keywords].insert(
+            name: keyword,
+            iduser: user[:id],
             hidden: false,
-	          created: now,
-	          changed: now
-	        )
+            created: now,
+            changed: now,
+          )
 
           DB[:templates].insert(
             idkeyword: idkeyword,
             object: sobject,
             created: now,
-            changed: now
+            changed: now,
           )
-      end
+        end
 
-      # keyword vorhanden, template dazu
-      # TODO
-      # in undo aufnehmen
+        # keyword vorhanden, template dazu
+        # TODO
+        # in undo aufnehmen
       else
         DB[:templates].insert(
           idkeyword: db_keyword[:id],
           object: sobject,
           created: now,
-          changed: now
+          changed: now,
         )
       end
 
-    # template loeschen
-    # hinweis
-    # loeschen beachtet verschiedene templates pro keyword, dies wird aber nicht benutzt
+      # template loeschen
+      # hinweis
+      # loeschen beachtet verschiedene templates pro keyword, dies wird aber nicht benutzt
     else
       if db_keyword
 
@@ -473,9 +472,9 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
         if DB[:definitions].where(idkeyword: db_keyword[:id]).first
           DB[:templates].where(idkeyword: db_keyword[:id]).where(Sequel.ilike(:object, "--- !ruby/object:#{targs[0]}%")).delete
 
-        # keyword mit template allein
-        # TODO
-        # in undo aufnehmen
+          # keyword mit template allein
+          # TODO
+          # in undo aufnehmen
         else
           DB.transaction do
             DB[:keywords].where(id: db_keyword[:id]).delete
@@ -486,12 +485,12 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       end
     end
 
-    event.respond 'Erledigt.'
+    event.respond "Erledigt."
 
-  # pin
+    # pin
   elsif cmd == "--pin"
     if targs.size < 2 or targs[1] !~ /^[1-9]\d?$/i
-      event.respond 'Fehlerhafter Aufruf.'
+      event.respond "Fehlerhafter Aufruf."
       return
     end
 
@@ -499,13 +498,13 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     keyword.delete! "\""
 
     # begriff bekannt?
-    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
+    db_keyword = DB[:keywords].where({ Sequel.function(:upper, :name) => Sequel.function(:upper, keyword) }).first
     unless db_keyword
-      event.respond 'Unbekannt.'
+      event.respond "Unbekannt."
       return
     end
     if db_keyword[:hidden]
-      event.respond 'Begriff darf nicht versteckt sein.'
+      event.respond "Begriff darf nicht versteckt sein."
       return
     end
 
@@ -523,25 +522,25 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
     definition_set.reverse_order(:pinned).order(:created).each do |definition|
       i += 1
       if targs[0].to_i == i
-	      db_definition = definition
+        db_definition = definition
       end
       if definition[:pinned] == true
         db_pinned_definition = definition
       end
     end
     if db_definition.empty?
-      event.respond 'Unbekannte Ziffer.'
+      event.respond "Unbekannte Ziffer."
       return
     end
 
     # auf alias hinweisen
     if db_keyword[:alias_id]
-      event.respond 'Hinweis: Alias aufgelöst, --pin wird auf Original angewendet.'
+      event.respond "Hinweis: Alias aufgelöst, --pin wird auf Original angewendet."
     end
     # auf bereits gepinnten eintrag hinweisen
     if db_pinned_definition.any?
       token = db_pinned_definition[:definition].split(/ /)
-      db_pinned_definition[:definition] = token[0] + ' .. ' + token[-1] if token.size > 3
+      db_pinned_definition[:definition] = token[0] + " .. " + token[-1] if token.size > 3
       event.respond "Hinweis: Gepinnter Eintrag \"#{db_pinned_definition[:definition]}\" wird überschrieben."
     end
 
@@ -550,15 +549,15 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       action = []
       if db_pinned_definition.any?
         db_data = DB[:definitions].where(id: db_pinned_definition[:id]).first
-        action.push [ :definitions, db_data[:id], db_data[:definition], db_data[:iduser], db_data[:idkeyword], db_data[:pinned], db_data[:created].to_i, db_data[:changed].to_i ]
+        action.push [:definitions, db_data[:id], db_data[:definition], db_data[:iduser], db_data[:idkeyword], db_data[:pinned], db_data[:created].to_i, db_data[:changed].to_i]
       end
       db_data = DB[:definitions].where(id: db_definition[:id]).first
-      action.push [ :definitions, db_data[:id], db_data[:definition], db_data[:iduser], db_data[:idkeyword], db_data[:pinned], db_data[:created].to_i, db_data[:changed].to_i ]
+      action.push [:definitions, db_data[:id], db_data[:definition], db_data[:iduser], db_data[:idkeyword], db_data[:pinned], db_data[:created].to_i, db_data[:changed].to_i]
       DB[:actions].insert(
         iduser: user[:id],
-        action: 'update',
+        action: "update",
         payload: YAML::dump(action),
-        created: Time.now.to_i
+        created: Time.now.to_i,
       )
 
       # bereits gepinnten ueberschreiben
@@ -570,14 +569,13 @@ bot.command([:merke, :define], description: 'Trägt in die Begriffs-Datenbank ei
       DB[:definitions].where(id: db_definition[:id]).update(pinned: true)
     end
 
-    event.respond 'Erledigt.'
+    event.respond "Erledigt."
 
-  # unbekannte option
+    # unbekannte option
   else
-    event.respond 'Unbekannte Option.'
+    event.respond "Unbekannte Option."
   end
-
-end 
+end
 
 # Fragt die Begriffs-DB ab.
 # Jeder.
@@ -596,20 +594,20 @@ end
 # #Hashtag
 # Durchsucht Definitionen nach Hashtag und gibt deren Begriffe aus.
 #
-bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.', usage: '~wasist ( [ --alles ] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) | --bsuche Suchtext-mit-%-Wildcards | #Hashtag )') do |event, *args|
+bot.command([:wasist, :whatis], description: "Fragt die Begriffs-Datenbank ab.", usage: '~wasist ( [ --alles ] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) | --bsuche Suchtext-mit-%-Wildcards | #Hashtag )') do |event, *args|
   seen(event)
 
   cmd = args.shift if args[0] =~ /^--/
 
   # tokenize nicht noetig bei abfragen (und macht die benutzung komplizierter)
-  keyword = args.join(' ') || ''
+  keyword = args.join(" ") || ""
   keyword.delete! "\""
   if keyword.empty?
-    event.respond 'Fehlerhafter Aufruf.'
+    event.respond "Fehlerhafter Aufruf."
     return
   end
   if keyword =~ /^#/ and keyword =~ /\s/
-    event.respond 'Kein Hashtag.'
+    event.respond "Kein Hashtag."
     return
   end
 
@@ -627,27 +625,25 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
         else
           seen_keywords.push row[:name]
         end
-
       end
     end
 
     if seen_keywords.any?
       # ausgeben
-      formatter(seen_keywords).each {|line| event.respond line }
+      formatter(seen_keywords).each { |line| event.respond line }
     else
-      event.respond 'Unbekannt.'
+      event.respond "Unbekannt."
     end
-
-  elsif cmd.nil? or cmd == '--alles' or cmd == '--verbose'
+  elsif cmd.nil? or cmd == "--alles" or cmd == "--verbose"
     # begriff bekannt?
     if cmd.nil?
-      db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => keyword.upcase}).first
-      db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first unless db_keyword
+      db_keyword = DB[:keywords].where({ Sequel.function(:upper, :name) => keyword.upcase }).first
+      db_keyword = DB[:keywords].where({ Sequel.function(:upper, :name) => Sequel.function(:upper, keyword) }).first unless db_keyword
     else
       db_keyword = DB.fetch('SELECT `keywords`.*, `users`.`name` AS \'username\' FROM `keywords` INNER JOIN `users` ON (`users`.`id` = `keywords`.`iduser`) WHERE (UPPER(`keywords`.`name`) = ?)', keyword.upcase).first
     end
     unless db_keyword
-      event.respond 'Unbekannt.'
+      event.respond "Unbekannt."
       return
     end
 
@@ -674,23 +670,23 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
         event << "**#{db_keyword[:name]} (#{db_orig_keyword[:name]}):**"
       else
         created = Time.at(db_orig_keyword[:created].to_i)
-        event << "**#{db_keyword[:name]} (#{db_orig_keyword[:name]})** #{db_orig_keyword[:username]} #{created.strftime('%H:%M %d.%m.%y')}:"
+        event << "**#{db_keyword[:name]} (#{db_orig_keyword[:name]})** #{db_orig_keyword[:username]} #{created.strftime("%H:%M %d.%m.%y")}:"
       end
     else
       if cmd.nil?
         event << "**#{db_keyword[:name]}:**"
       else
         created = Time.at(db_keyword[:created].to_i)
-        event << "**#{db_keyword[:name]}** #{db_keyword[:username]} #{created.strftime('%H:%M %d.%m.%y')}:"
+        event << "**#{db_keyword[:name]}** #{db_keyword[:username]} #{created.strftime("%H:%M %d.%m.%y")}:"
       end
     end
 
     # aliase fuer --alles holen
-    alias_set = DB.fetch('SELECT `keywords`.*, `users`.`name` AS \'username\' FROM `keywords` INNER JOIN `users` ON (`users`.`id` = `keywords`.`iduser`) WHERE (`keywords`.`alias_id` = ?)', db_keyword[:alias_id] ? db_keyword[:alias_id] : db_keyword[:id]).map{|row| "#{row[:name]} (#{row[:username]} #{Time.at(row[:created].to_i).strftime('%H:%M %d.%m.%y')})" }
+    alias_set = DB.fetch('SELECT `keywords`.*, `users`.`name` AS \'username\' FROM `keywords` INNER JOIN `users` ON (`users`.`id` = `keywords`.`iduser`) WHERE (`keywords`.`alias_id` = ?)', db_keyword[:alias_id] ? db_keyword[:alias_id] : db_keyword[:id]).map { |row| "#{row[:name]} (#{row[:username]} #{Time.at(row[:created].to_i).strftime("%H:%M %d.%m.%y")})" }
     if cmd and alias_set.any?
-      event << 'Alias(e):'
-      formatter(alias_set).each {|line| event << line }
-      event << 'Erläuterung(en):'
+      event << "Alias(e):"
+      formatter(alias_set).each { |line| event << line }
+      event << "Erläuterung(en):"
     end
 
     # hinweis
@@ -710,22 +706,21 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
       definition_set.each do |definition|
         created = Time.at(definition[:created].to_i)
         pinned = "(gepinnt) " if definition[:pinned]
-        event << "#{definition[:definition]} #{pinned}(#{definition[:username]} #{created.strftime('%H:%M %d.%m.%y')}) (#{i += 1})"
+        event << "#{definition[:definition]} #{pinned}(#{definition[:username]} #{created.strftime("%H:%M %d.%m.%y")}) (#{i += 1})"
       end
     end
-
   elsif cmd == "--bsuche" or cmd == "--ksearch"
     if keyword.length < 3
-      event.respond 'Suchbegriff zu kurz. Drei Zeichen bitte.'
+      event.respond "Suchbegriff zu kurz. Drei Zeichen bitte."
       return
     elsif keyword !~ /%/
-      keyword = '%' + keyword + '%'
+      keyword = "%" + keyword + "%"
     end
 
     # begriff bekannt?
     db_keywords = DB[:keywords].where(Sequel.ilike(:name, keyword)).where(hidden: false).order(:name)
     unless db_keywords.any?
-      event.respond 'Unbekannt.'
+      event.respond "Unbekannt."
       return
     end
 
@@ -735,27 +730,24 @@ bot.command([:wasist, :whatis], description: 'Fragt die Begriffs-Datenbank ab.',
 
       # aliase aufloesen
       if db_k[:alias_id]
-	      db_orig_keyword = DB[:keywords].where(id: db_k[:alias_id]).first
+        db_orig_keyword = DB[:keywords].where(id: db_k[:alias_id]).first
 
-	      # bei alias auch original anzeigen
-	      kw_names.push "#{db_k[:name]} (#{db_orig_keyword[:name]})"
-
+        # bei alias auch original anzeigen
+        kw_names.push "#{db_k[:name]} (#{db_orig_keyword[:name]})"
       else
-	      kw_names.push db_k[:name]
+        kw_names.push db_k[:name]
       end
-
     end
 
     # ausgeben
-    formatter(kw_names).each {|line| event.respond line }
+    formatter(kw_names).each { |line| event.respond line }
 
-  # unbekannte option
+    # unbekannte option
   else
-    event.respond 'Unbekannte Option.'
+    event.respond "Unbekannte Option."
   end
 
   return
-
 end
 
 # Loescht aus der Begriffs-Datenbank.
@@ -770,11 +762,11 @@ end
 # --pin Begriff
 # Setz gepinnten Eintrag des Begriffs zurueck.
 #
-bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenbank.', usage: '~vergiss ( ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Klammer-Ziffer aus ~wasist | ( --alias | --pin ) ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) )') do |event, *args|
+bot.command([:vergiss, :undefine], description: "Löscht aus der Begriffs-Datenbank.", usage: '~vergiss ( ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Klammer-Ziffer aus ~wasist | ( --alias | --pin ) ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) )') do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
-    event.respond 'Nur Bot-User dürfen das!'
+    event.respond "Nur Bot-User dürfen das!"
     return
   end
 
@@ -787,15 +779,15 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
   keyword = targs.shift || ""
   keyword.delete! "\""
   if keyword.empty?
-    event.respond 'Fehlerhafter Aufruf.'
+    event.respond "Fehlerhafter Aufruf."
     return
   end
 
   if cmd.nil?
     # begriff bekannt?
-    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
+    db_keyword = DB[:keywords].where({ Sequel.function(:upper, :name) => Sequel.function(:upper, keyword) }).first
     unless db_keyword
-      event.respond 'Unbekannt.'
+      event.respond "Unbekannt."
       return
     end
 
@@ -810,7 +802,7 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
     if targs[0] !~ /^\d+$/
       # nur noetig, wenn mehr als ein eintrag vorhanden ist
       if definition_set.count > 1
-        event.respond 'Ziffer fehlt.'
+        event.respond "Ziffer fehlt."
         return
       else
         targs[0] = 1
@@ -826,85 +818,84 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
     definition_set.order(:created).each do |definition|
       i += 1
       if targs[0].to_i == i
-	db_definition = definition
-	break
+        db_definition = definition
+        break
       end
     end
     if db_definition.empty?
-      event.respond 'Unbekannte Ziffer.'
+      event.respond "Unbekannte Ziffer."
       return
     end
 
     # zur abfrage darstellen, eventuell verkuerzt
     token = db_definition[:definition].split(/ /)
-    db_definition[:definition] = token[0] + ' .. ' + token[-1] if token.size > 3
+    db_definition[:definition] = token[0] + " .. " + token[-1] if token.size > 3
     event.respond "Eintrag \"#{db_definition[:definition]}\" wirklich löschen? (j/n)"
 
     # sicherheitsabfrage
     event.user.await(:wirklich) do |wirklich_event|
       if wirklich_event.message.content.downcase == "j"
 
-	# nur ein eintrag und keine templates: keyword, aliase und eintrag loeschen
-	if definition_set.count == 1 and ! db_template
-	  DB.transaction do
+        # nur ein eintrag und keine templates: keyword, aliase und eintrag loeschen
+        if definition_set.count == 1 and !db_template
+          DB.transaction do
             # fuer undo merken
             db_data_set = DB[:keywords].where(id: db_definition[:idkeyword]).or(alias_id: db_definition[:idkeyword])
             action = []
             db_data_set.each do |row|
-              action.push [ :keywords, row[:id], row[:name], row[:iduser], row[:alias_id], row[:primer], row[:hidden], row[:created].to_i, row[:changed].to_i ]
+              action.push [:keywords, row[:id], row[:name], row[:iduser], row[:alias_id], row[:primer], row[:hidden], row[:created].to_i, row[:changed].to_i]
             end
             definition_set.each do |row|
-              action.push [ :definitions, row[:id], row[:definition], row[:iduser], row[:idkeyword], row[:pinned], row[:created].to_i, row[:changed].to_i ]
+              action.push [:definitions, row[:id], row[:definition], row[:iduser], row[:idkeyword], row[:pinned], row[:created].to_i, row[:changed].to_i]
             end
             DB[:actions].insert(
               iduser: user[:id],
-              action: 'delete',
+              action: "delete",
               payload: YAML::dump(action),
-              created: Time.now.to_i
+              created: Time.now.to_i,
             )
 
-	    DB[:keywords].where(id: db_definition[:idkeyword]).or(alias_id: db_definition[:idkeyword]).delete
-	    definition_set.delete
-	  end
+            DB[:keywords].where(id: db_definition[:idkeyword]).or(alias_id: db_definition[:idkeyword]).delete
+            definition_set.delete
+          end
 
-	# mehrere eintraege: einen loeschen
-	else
+          # mehrere eintraege: einen loeschen
+        else
           DB.transaction do
             # fuer undo merken
             db_data = DB[:definitions].where(id: db_definition[:id]).first
             action = [
-              [ :definitions, db_data[:id], db_data[:definition],  db_data[:iduser], db_data[:idkeyword], db_data[:pinned], db_data[:created].to_i, db_data[:changed].to_i ]
+              [:definitions, db_data[:id], db_data[:definition], db_data[:iduser], db_data[:idkeyword], db_data[:pinned], db_data[:created].to_i, db_data[:changed].to_i],
             ]
             DB[:actions].insert(
               iduser: user[:id],
-              action: 'delete',
+              action: "delete",
               payload: YAML::dump(action),
-              created: Time.now.to_i
+              created: Time.now.to_i,
             )
 
-	    definition_set.where(id: db_definition[:id]).delete
+            definition_set.where(id: db_definition[:id]).delete
           end
-	end
+        end
 
-	wirklich_event.respond 'Erledigt.'
+        wirklich_event.respond "Erledigt."
       else
-	wirklich_event.respond 'Dann nicht.'
+        wirklich_event.respond "Dann nicht."
       end
     end
 
     return
-
   elsif cmd == "--alias"
     # begriff bekannt?
-    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
+    db_keyword = DB[:keywords].where({ Sequel.function(:upper, :name) => Sequel.function(:upper, keyword) }).first
     unless db_keyword
-      event.respond 'Unbekannt.'
+      event.respond "Unbekannt."
       return
     end
 
     # begriff muss alias sein
     unless db_keyword[:alias_id]
-      event.respond 'Kein Alias.'
+      event.respond "Kein Alias."
       return
     end
 
@@ -912,25 +903,24 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
       # fuer undo merken
       db_data = DB[:keywords].where(id: db_keyword[:id]).first
       action = [
-        [ :keywords, db_data[:id], db_data[:name], db_data[:iduser], db_data[:alias_id], db_data[:primer], db_data[:hidden], db_data[:created].to_i, db_data[:changed].to_i ]
+        [:keywords, db_data[:id], db_data[:name], db_data[:iduser], db_data[:alias_id], db_data[:primer], db_data[:hidden], db_data[:created].to_i, db_data[:changed].to_i],
       ]
       DB[:actions].insert(
         iduser: user[:id],
-        action: 'delete',
+        action: "delete",
         payload: YAML::dump(action),
-        created: Time.now.to_i
+        created: Time.now.to_i,
       )
 
       DB[:keywords].where(id: db_keyword[:id]).delete
     end
 
-    event.respond 'Erledigt.'
-
+    event.respond "Erledigt."
   elsif cmd == "--pin"
     # begriff bekannt?
-    db_keyword = DB[:keywords].where({Sequel.function(:upper, :name) => Sequel.function(:upper, keyword)}).first
+    db_keyword = DB[:keywords].where({ Sequel.function(:upper, :name) => Sequel.function(:upper, keyword) }).first
     unless db_keyword
-      event.respond 'Unbekannt.'
+      event.respond "Unbekannt."
       return
     end
 
@@ -942,7 +932,7 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
     end
 
     unless db_definition
-      event.respond 'Kein Eintrag gepinnt.'
+      event.respond "Kein Eintrag gepinnt."
       return
     end
 
@@ -950,34 +940,33 @@ bot.command([:vergiss, :undefine], description: 'Löscht aus der Begriffs-Datenb
       # fuer undo merken
       db_data = DB[:definitions].where(id: db_definition[:id]).first
       action = [
-        [ :definitions, db_definition[:id], db_definition[:definition], db_definition[:iduser], db_definition[:idkeyword], db_definition[:pinned], db_definition[:created].to_i, db_definition[:changed].to_i ]
+        [:definitions, db_definition[:id], db_definition[:definition], db_definition[:iduser], db_definition[:idkeyword], db_definition[:pinned], db_definition[:created].to_i, db_definition[:changed].to_i],
       ]
       DB[:actions].insert(
         iduser: user[:id],
-        action: 'update',
+        action: "update",
         payload: YAML::dump(action),
-        created: Time.now.to_i
+        created: Time.now.to_i,
       )
 
       DB[:definitions].where(id: db_definition[:id]).update(pinned: false)
     end
 
-    event.respond 'Erledigt.'
+    event.respond "Erledigt."
 
-  # unbekannte option
+    # unbekannte option
   else
-    event.respond 'Unbekannte Option.'
+    event.respond "Unbekannte Option."
   end
-
 end
 
 # Bot-Info
 # Jeder.
 #
-bot.command([:ueber, :about], description: 'Nennt Bot-Infos.') do |event, *args|
+bot.command([:ueber, :about], description: "Nennt Bot-Infos.") do |event, *args|
   seen(event)
 
-  event << "v#{config['version']} #{config['website']}"
+  event << "v#{config["version"]} #{config["website"]}"
   event << "#{DB[:users].count} Benutzer"
   event << "#{DB[:keywords].where(alias_id: nil, hidden: false).count} Begriffe und #{DB[:keywords].where(hidden: false).exclude(alias_id: nil).count} Aliase"
   event << "#{DB[:definitions].join(:keywords, :id => :idkeyword).where(hidden: false).count} Erklärungen"
@@ -1005,13 +994,13 @@ end
 # --list
 # Listet Bot-Benutzer auf.
 #
-bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage: '~user --list | --add  Discord-User [Botmaster] | ( --enable | --disable  | --botmaster Discord-User )') do |event, *args|
+bot.command(:user, description: "Regelt Benutzer-Rechte. Nur Bot-Master.", usage: "~user --list | --add  Discord-User [Botmaster] | ( --enable | --disable  | --botmaster Discord-User )") do |event, *args|
   # sonderregel fuer ersten benutzer
   if DB[:users].first
     # sonst recht zum aufruf pruefen
     user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
     unless user
-      event.respond 'Nur Bot-Master dürfen das!'
+      event.respond "Nur Bot-Master dürfen das!"
       return
     end
 
@@ -1029,7 +1018,7 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
     duser = targs.shift || ""
     duser.delete! "\""
     if duser.empty?
-      event.respond 'Fehlerhafter Aufruf.'
+      event.respond "Fehlerhafter Aufruf."
       return
     end
 
@@ -1037,62 +1026,61 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
     new_user = {}
     bot.users.each do |u|
       if u[1].username.downcase == duser.downcase
-	new_user['username'] = u[1].username
-	new_user['id'] = u[1].id
-	break
+        new_user["username"] = u[1].username
+        new_user["id"] = u[1].id
+        break
       end
     end
     if new_user.empty?
-      event.respond 'Unbekannter Discord-User.'
+      event.respond "Unbekannter Discord-User."
       return
     end
 
     # gibt es den user schon im bot?
-    old_user = DB[:users].where(discord_id: new_user['id']).first
+    old_user = DB[:users].where(discord_id: new_user["id"]).first
     if old_user
-      event.respond 'User schon vorhanden.'
+      event.respond "User schon vorhanden."
       return
     end
 
-
     # der erste benutzer bei "no_users" ist immer botmaster
     if args[1]&.downcase == "botmaster" or no_users
-      new_user['botmaster'] = 1
+      new_user["botmaster"] = 1
     else
-      new_user['botmaster'] = 0
+      new_user["botmaster"] = 0
     end
 
     now = Time.now.to_i
     DB[:users].insert(
-      discord_id: new_user['id'],
-      name: new_user['username'],
-      botmaster: new_user['botmaster'],
+      discord_id: new_user["id"],
+      name: new_user["username"],
+      botmaster: new_user["botmaster"],
       enabled: 1,
       created: now,
-      changed: now
+      changed: now,
     )
 
-    event.respond 'Erledigt.'
+    event.respond "Erledigt."
 
-  # disable
+    # disable
   elsif cmd =~ /^--(enable|disable)$/
     duser = targs.shift || ""
     duser.delete! "\""
     if duser.empty?
-      event.respond 'Fehlerhafter Aufruf.'
+      event.respond "Fehlerhafter Aufruf."
       return
     end
 
     # gibt es den user im bot?
-    target_user = DB[:users].where({Sequel.function(:upper, :name) => Sequel.function(:upper, duser)}).first
+    target_user = DB[:users].where({ Sequel.function(:upper, :name) => Sequel.function(:upper, duser) }).first
     unless target_user
-      event.respond 'Nicht vorhanden.'
+      event.respond "Nicht vorhanden."
       return
     end
 
     # user darf kein botmaster sein
     if target_user[:botmaster]
-      event.respond 'User darf kein Bot-Master sein.'
+      event.respond "User darf kein Bot-Master sein."
       return
     end
 
@@ -1104,29 +1092,29 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
 
     DB[:users].where(id: target_user[:id]).update(enabled: enabled)
 
-    event.respond 'Erledigt.'
+    event.respond "Erledigt."
 
-  # botmaster
+    # botmaster
   elsif cmd == "--botmaster"
     duser = targs.shift || ""
     duser.delete! "\""
     if duser.empty?
-      event.respond 'Fehlerhafter Aufruf.'
+      event.respond "Fehlerhafter Aufruf."
       return
     end
 
     # gibt es den user im bot?
-    target_user = DB[:users].where({Sequel.function(:upper, :name) => Sequel.function(:upper, duser)}).first
+    target_user = DB[:users].where({ Sequel.function(:upper, :name) => Sequel.function(:upper, duser) }).first
     unless target_user
-      event.respond 'User nicht vorhanden.'
+      event.respond "User nicht vorhanden."
       return
     end
 
     DB[:users].where(id: target_user[:id]).update(botmaster: true)
 
-    event.respond 'Erledigt.'
+    event.respond "Erledigt."
 
-  # list
+    # list
   elsif cmd == "--list"
     en_users = DB[:users].where(enabled: true).order(:name)
     dis_users = DB[:users].where(enabled: false).order(:name)
@@ -1134,16 +1122,16 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
     unless en_users.empty?
       event << "User:"
       en_users.each do |user|
-	      botmaster = user[:botmaster] ? ", Botmaster" : ""
-	      event << user[:name] + botmaster
+        botmaster = user[:botmaster] ? ", Botmaster" : ""
+        event << user[:name] + botmaster
       end
     end
 
     unless dis_users.empty?
       event << "Inaktive:"
       dis_users.each do |user|
-	      botmaster = user[:botmaster] ? ", Botmaster" : ""
-	      event << user[:name] + botmaster
+        botmaster = user[:botmaster] ? ", Botmaster" : ""
+        event << user[:name] + botmaster
       end
     end
 
@@ -1151,36 +1139,35 @@ bot.command(:user, description: 'Regelt Benutzer-Rechte. Nur Bot-Master.', usage
       event << "Keine User."
     end
 
-  # unbekannte option
+    # unbekannte option
   else
-    event.respond 'Unbekannte Option.'
+    event.respond "Unbekannte Option."
   end
-
 end
 
 # Zeigt Begriffe mit neuen Erklaerungen.
 # Jeder.
 #
-bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der Begriffs-Datenbank.', usage: '~neueste') do |event, *args|
+bot.command([:neueste, :latest], description: "Zeigt die neuesten Einträge der Begriffs-Datenbank.", usage: "~neueste") do |event, *args|
   seen(event)
 
-  definition_set = DB[:keywords].select(:name, Sequel[:definitions][:created]).join(:definitions, :idkeyword => :id).where(hidden: false).reverse_order(Sequel[:definitions][:created]).limit(config['show_latest'] + 50)
-  template_set = DB[:keywords].select(:name, Sequel[:templates][:created]).join(:templates, :idkeyword => :id).where(hidden: false).reverse_order(Sequel[:templates][:created]).limit(config['show_latest'] + 50)
+  definition_set = DB[:keywords].select(:name, Sequel[:definitions][:created]).join(:definitions, :idkeyword => :id).where(hidden: false).reverse_order(Sequel[:definitions][:created]).limit(config["show_latest"] + 50)
+  template_set = DB[:keywords].select(:name, Sequel[:templates][:created]).join(:templates, :idkeyword => :id).where(hidden: false).reverse_order(Sequel[:templates][:created]).limit(config["show_latest"] + 50)
   dataset = definition_set.all + template_set.all
-  sdataset = dataset.sort_by {|row| row[:created]}.reverse
+  sdataset = dataset.sort_by { |row| row[:created] }.reverse
 
-  event << '**Die neuesten Einträge:**'
+  event << "**Die neuesten Einträge:**"
 
   unless sdataset.count > 0
-    event << 'Keine.'
-    event << 'Das ist ein bisschen traurig.'
+    event << "Keine."
+    event << "Das ist ein bisschen traurig."
     return
   end
 
   # doppelte keywords aussortieren
   seen_keywords = []
   sdataset.each do |entry|
-    break if seen_keywords.size == config['show_latest']
+    break if seen_keywords.size == config["show_latest"]
     if seen_keywords.include? entry[:name]
       next
     else
@@ -1190,10 +1177,9 @@ bot.command([:neueste, :latest], description: 'Zeigt die neuesten Einträge der 
 
   # ausgeben
   #formatter(seen_keywords).each {|line| event.respond line }
-  formatter(seen_keywords).each {|line| event << line }
+  formatter(seen_keywords).each { |line| event << line }
 
   return
-
 end
 
 # Wuerfelt mit verschiedenen Wuerfeln.
@@ -1202,12 +1188,12 @@ end
 # Anzahl der Wuerfe mal Seitenzahl.
 # Standard ist 1d6.
 #
-bot.command([:wuerfeln, :roll], description: 'Würfelt bis 9d999.', usage: '~wuerfeln [ 1 - 9 ( d | w ) 1 - 999 ]') do |event, *args|
+bot.command([:wuerfeln, :roll], description: "Würfelt bis 9d999.", usage: "~wuerfeln [ 1 - 9 ( d | w ) 1 - 999 ]") do |event, *args|
   seen(event)
 
-  args.push '1d6' unless args.any?
+  args.push "1d6" unless args.any?
   unless args[0] =~ /^([1-9])(?:(?:d|w)([1-9]\d{,2}))?$/
-    event.respond 'Fehlerhafter Aufruf.'
+    event.respond "Fehlerhafter Aufruf."
     return
   end
   anzahl = $1.to_i
@@ -1216,11 +1202,11 @@ bot.command([:wuerfeln, :roll], description: 'Würfelt bis 9d999.', usage: '~wue
   erg = []
   rng = Random.new
   (1..anzahl).each do |i|
-    erg.push '.' * (rand(6) + 1)
+    erg.push "." * (rand(6) + 1)
     erg.push rng.rand(seiten.to_i) + 1
   end
 
-  event.respond ':game_die:' + erg * ' '
+  event.respond ":game_die:" + erg * " "
 
   return
 end
@@ -1228,17 +1214,17 @@ end
 # Fragt die Datenbank mit einem zufaelligen Begriff ab.
 # Jeder.
 #
-bot.command([:zufaellig, :random, :rnd], description: 'Zeigt einen zufälligen Begriff.', usage: '~zufaellig') do |event, *args|
+bot.command([:zufaellig, :random, :rnd], description: "Zeigt einen zufälligen Begriff.", usage: "~zufaellig") do |event, *args|
   seen(event)
 
-  db_keyword = DB[:keywords].where(hidden: false).order(Sequel.lit('RANDOM()')).first
+  db_keyword = DB[:keywords].where(hidden: false).order(Sequel.lit("RANDOM()")).first
   unless db_keyword
-    event << 'Es gibt keine Einträge.'
-    event << 'Das ist ein bisschen traurig.'
+    event << "Es gibt keine Einträge."
+    event << "Das ist ein bisschen traurig."
     return
   end
 
-  bot.execute_command(:wasist, event, [ db_keyword[:name] ])
+  bot.execute_command(:wasist, event, [db_keyword[:name]])
 end
 
 # Datenbank-Verwaltung
@@ -1247,11 +1233,11 @@ end
 # --export
 # Stellt die Datenbank zeitlich begrenzt zum Download bereit.
 #
-bot.command([:datenbank, :database, :db], description: 'Datenbank-Verwaltung. Nur Bot-Master.', usage: '~datenbank --export') do |event, *args|
+bot.command([:datenbank, :database, :db], description: "Datenbank-Verwaltung. Nur Bot-Master.", usage: "~datenbank --export") do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
   unless user
-    event.respond 'Nur Bot-Master dürfen das!'
+    event.respond "Nur Bot-Master dürfen das!"
     return
   end
 
@@ -1261,33 +1247,33 @@ bot.command([:datenbank, :database, :db], description: 'Datenbank-Verwaltung. Nu
 
   targs = tokenize(args)
 
-  if cmd == '--export'
-    uri = URI("http://#{config['dl_hostname']}:#{config['dl_host_port']}")
+  if cmd == "--export"
+    uri = URI("http://#{config["dl_hostname"]}:#{config["dl_host_port"]}")
     begin
       res = Net::HTTP.get_response(uri)
     rescue
     else
-      event.respond 'Das geht gerade nicht. Bitte warte 60 Sekunden.'
+      event.respond "Das geht gerade nicht. Bitte warte 60 Sekunden."
       return
     end
 
     # datei bereitstellen
-    filename = 'bot-' + SecureRandom.urlsafe_base64(10) + '.db'
-    FileUtils.cp 'db/bot.db', "public/#{filename}"
-    zfilename = filename + '.gz'
+    filename = "bot-" + SecureRandom.urlsafe_base64(10) + ".db"
+    FileUtils.cp "db/bot.db", "public/#{filename}"
+    zfilename = filename + ".gz"
     Zlib::GzipWriter.open("public/#{zfilename}") do |gz|
       gz.write IO.binread("public/#{filename}")
     end
     FileUtils.rm "public/#{filename}"
 
     # webserver
-    server = Adsf::Server.new(host: '0.0.0.0', root: 'public')
+    server = Adsf::Server.new(host: "0.0.0.0", root: "public")
 
-    event.respond "SQLite-Datenbank für 60 s verfügbar http://#{config['dl_hostname']}:#{config['dl_host_port']}/#{zfilename}"
+    event.respond "SQLite-Datenbank für 60 s verfügbar http://#{config["dl_hostname"]}:#{config["dl_host_port"]}/#{zfilename}"
 
     # timer
     scheduler = Rufus::Scheduler.new
-    scheduler.in '60s' do
+    scheduler.in "60s" do
       server.stop
       FileUtils.rm "public/#{zfilename}"
     end
@@ -1295,26 +1281,25 @@ bot.command([:datenbank, :database, :db], description: 'Datenbank-Verwaltung. Nu
     server.run
     scheduler.join
 
-  # unbekannte option
+    # unbekannte option
   else
-    event.respond 'Unbekannte Option.'
+    event.respond "Unbekannte Option."
   end
-
 end
 
 # Zeigt alle Hashtags.
 # Jeder.
 #
-bot.command([:tagszeigen, :showtags], description: 'Zeigt alle Hashtags.', usage: '~tagszeigen') do |event, *args|
+bot.command([:tagszeigen, :showtags], description: "Zeigt alle Hashtags.", usage: "~tagszeigen") do |event, *args|
   seen(event)
 
-  definition_set = DB[:definitions].where(Sequel.ilike(:definition, '%#%')).map(:definition)
+  definition_set = DB[:definitions].where(Sequel.ilike(:definition, "%#%")).map(:definition)
 
-  event << '**Alle Hashtags:**'
+  event << "**Alle Hashtags:**"
 
   unless definition_set.any?
-    event << 'Keine.'
-    event << 'Das ist ein bisschen traurig.'
+    event << "Keine."
+    event << "Das ist ein bisschen traurig."
     return
   end
 
@@ -1331,26 +1316,25 @@ bot.command([:tagszeigen, :showtags], description: 'Zeigt alle Hashtags.', usage
   end
 
   # ausgeben
-  formatter(seen_tags.sort).each {|line| event << line }
+  formatter(seen_tags.sort).each { |line| event << line }
 
   return
-
 end
 
 # Macht bestimmte Aktionen waehrend einer begrenzten Zeitspanne rueckgaengig
 # Nur Bot-User.
 #
-bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. Funktioniert für 30 s nach der Aktion.', usage: '~undo') do |event, *args|
+bot.command([:aufheben, :undo], description: "Kann Sachen rückgängig machen. Funktioniert für 30 s nach der Aktion.", usage: "~undo") do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
-    event.respond 'Nur Bot-User dürfen das!'
+    event.respond "Nur Bot-User dürfen das!"
     return
   end
 
   #unless user[:id] == 1
-    #event.respond 'Das geht noch nicht.'
-    #return
+  #event.respond 'Das geht noch nicht.'
+  #return
   #end
 
   seen(event, user)
@@ -1358,24 +1342,24 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
   # gibt es etwas rueckgaengig zu machen?
   db_action = DB[:actions].where(iduser: user[:id], applied: false).reverse_order(:created).first
   unless db_action
-    event.respond 'Keine Aktion aufzuheben.'
+    event.respond "Keine Aktion aufzuheben."
     return
   end
 
   # zeit ueberschritten
   now = Time.now.to_i
-  unless now - db_action[:created].to_i < config['undo_timeout']
-    event.respond 'Das geht nicht mehr.'
+  unless now - db_action[:created].to_i < config["undo_timeout"]
+    event.respond "Das geht nicht mehr."
     return
   end
 
-  if db_action[:action] == 'insert'
+  if db_action[:action] == "insert"
     DB.transaction do
       payload = YAML::load db_action[:payload]
       # gibt es die daten noch?
       db_data = DB[payload[0][0]].where(id: payload[0][1]).first
       unless db_data
-        event.respond 'Das geht nicht mehr.'
+        event.respond "Das geht nicht mehr."
         return
       end
 
@@ -1399,7 +1383,7 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
       else
         # todo
         # hier pruefen, ob es nur noch eine defintion gibt
-        db_removed_def_set = DB[:actions].where(Sequel[:created] > db_action[:created].to_i).where(action: 'delete').exclude(iduser: user[:id])
+        db_removed_def_set = DB[:actions].where(Sequel[:created] > db_action[:created].to_i).where(action: "delete").exclude(iduser: user[:id])
         db_removed_def_set.each do |row|
           removed_payload = YAML::load row[:payload]
           if removed_payload[0][0] == :definitions and removed_payload[0][4] == payload[0][4]
@@ -1409,7 +1393,7 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
         end
       end
       if db_added_alias or db_added_def or db_changed_tpl or removed_def
-        event.respond 'Das geht nicht mehr.'
+        event.respond "Das geht nicht mehr."
         return
       end
 
@@ -1417,14 +1401,13 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
         DB[pl[0]].where(id: pl[1]).delete
       end
     end
-
-  elsif db_action[:action] == 'update'
+  elsif db_action[:action] == "update"
     DB.transaction do
       payload = YAML::load db_action[:payload]
       if payload[0][0] == :keywords
         db_data = DB[:keywords].where(id: payload[0][1]).first
         unless db_data
-          event.respond 'Das geht nicht mehr.'
+          event.respond "Das geht nicht mehr."
           return
         end
 
@@ -1432,7 +1415,7 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
         # keyword geaendert - id und datum in keywords
         db_changed_kw = DB[:keywords].where(Sequel[:created] > db_action[:created].to_i).or(Sequel[:changed] > db_action[:created].to_i).where(id: payload[0][1]).first
         if db_changed_kw
-          event.respond 'Das geht nicht mehr.'
+          event.respond "Das geht nicht mehr."
           return
         end
 
@@ -1440,13 +1423,13 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
         DB[:keywords].where(id: payload[0][1]).update(primer: payload[0][5], hidden: payload[0][6], changed: now)
         db_data = DB[:keywords].where(id: payload[0][1]).first
 
-      # gibt es die daten noch?
-      # unflexibel, weil dies wegen 'idkeyword' nur fuer updates von 'templates' funktioniert
-      # alternativ pruefen, ob es in 'actions' einen delete-eintrag fuer dieses idkeyword gibt.
+        # gibt es die daten noch?
+        # unflexibel, weil dies wegen 'idkeyword' nur fuer updates von 'templates' funktioniert
+        # alternativ pruefen, ob es in 'actions' einen delete-eintrag fuer dieses idkeyword gibt.
       elsif payload[0][0] == :templates
         db_data = DB[payload[0][0]].where(idkeyword: payload[0][1]).first
         unless db_data
-          event.respond 'Das geht nicht mehr.'
+          event.respond "Das geht nicht mehr."
           return
         end
 
@@ -1454,21 +1437,21 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
         # template geaendert - idkeyword und datum in templates
         db_changed_tpl = DB[:templates].where(Sequel[:created] > db_action[:created].to_i).or(Sequel[:changed] > db_action[:created].to_i).where(idkeyword: payload[0][1]).first
         if db_changed_tpl
-          event.respond 'Das geht nicht mehr.'
+          event.respond "Das geht nicht mehr."
           return
         end
 
         DB[payload[0][0]].where(idkeyword: payload[0][1]).update(object: payload[0][2], changed: now)
 
-      # payload pruefen
-      # gibt es das keyword noch?
-      # gibt es die eintraege noch?
-      # wurde sonst aenderungen an der definition vorgenommen, die in actions notiert sind?
+        # payload pruefen
+        # gibt es das keyword noch?
+        # gibt es die eintraege noch?
+        # wurde sonst aenderungen an der definition vorgenommen, die in actions notiert sind?
       elsif payload[0][0] == :definitions
         payload.each do |pl|
           db_definition = DB[:definitions].where(id: pl[1]).first
           db_keyword = DB[:keywords].where(id: pl[4]).first
-          db_changed_def = DB[:actions].where(Sequel[:created] > db_action[:created].to_i).where(action: 'update').exclude(iduser: user[:id]).first
+          db_changed_def = DB[:actions].where(Sequel[:created] > db_action[:created].to_i).where(action: "update").exclude(iduser: user[:id]).first
           changed_def = false
           if db_changed_def
             changed_payload = YAML::load db_changed_def[:payload]
@@ -1480,8 +1463,8 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
             end
           end
 
-          unless db_definition and db_keyword and ! changed_def
-            event.respond 'Das geht nicht mehr.'
+          unless db_definition and db_keyword and !changed_def
+            event.respond "Das geht nicht mehr."
             return
           end
         end
@@ -1489,11 +1472,9 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
         payload.each do |pl|
           DB[:definitions].where(id: pl[1]).update(pinned: pl[5], created: pl[6], changed: pl[7])
         end
-
       end
     end
-
-  elsif db_action[:action] == 'delete'
+  elsif db_action[:action] == "delete"
     # keyword + definition
     # keyword dazu
     #
@@ -1511,23 +1492,23 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
       payload = YAML::load db_action[:payload]
 
       #if payload.size > 1
-        # payload pruefen
-        # keyword darf inzwischen nicht als solches oder alias angelegt worden sein
-        db_added_same_kw_or_alias = false
-        payload.each do |pl|
-          if pl[0] == :keywords and DB[:keywords].where(name: pl[2]).or(alias_id: pl[2]).first
-            added_same_kw_or_alias = true
-            break
-          end
+      # payload pruefen
+      # keyword darf inzwischen nicht als solches oder alias angelegt worden sein
+      db_added_same_kw_or_alias = false
+      payload.each do |pl|
+        if pl[0] == :keywords and DB[:keywords].where(name: pl[2]).or(alias_id: pl[2]).first
+          added_same_kw_or_alias = true
+          break
         end
+      end
       #else
-        # payload pruefen
-        # keyword muss noch da sein
-        db_keyword = DB[:keywords].where(id: payload[0][4]).first
+      # payload pruefen
+      # keyword muss noch da sein
+      db_keyword = DB[:keywords].where(id: payload[0][4]).first
       #end
 
-      if db_added_same_kw_or_alias or ! db_keyword
-        event.respond 'Das geht nicht mehr.'
+      if db_added_same_kw_or_alias or !db_keyword
+        event.respond "Das geht nicht mehr."
         return
       end
 
@@ -1539,25 +1520,22 @@ bot.command([:aufheben, :undo], description: 'Kann Sachen rückgängig machen. F
         primer: payload[0][5],
         hidden: payload[0][6],
         created: payload[0][7],
-        changed: payload[0][8]
+        changed: payload[0][8],
       )
     end
-
   else
-
   end
 
   DB[:actions].where(id: db_action[:id]).update(applied: true)
 
-  event.respond 'Erledigt.'
-
+  event.respond "Erledigt."
 end
 
-bot.command([:log], description: '', usage: '') do |event, *args|
+bot.command([:log], description: "", usage: "") do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
-    event.respond 'Nur Bot-User dürfen das!'
+    event.respond "Nur Bot-User dürfen das!"
     return
   end
 
@@ -1570,7 +1548,7 @@ bot.command([:log], description: '', usage: '') do |event, *args|
   # eintrag speichern
   if cmd.nil?
     if targs.empty?
-      event.respond 'Fehlerhafter Aufruf.'
+      event.respond "Fehlerhafter Aufruf."
       return
     end
 
@@ -1579,18 +1557,18 @@ bot.command([:log], description: '', usage: '') do |event, *args|
     DB.transaction do
       DB[:diaries].insert(
         iduser: user[:id],
-        entry: targs.join(' '),
+        entry: targs.join(" "),
         created: now,
-        changed: now
-        )
+        changed: now,
+      )
     end
 
-    event.respond 'Erledigt.'
+    event.respond "Erledigt."
 
-  # --last
-  elsif cmd == '--last'
+    # --last
+  elsif cmd == "--last"
     if targs.size > 0 and targs[0] !~ /^[1-9]\d?$/i
-      event.respond 'Fehlerhafter Aufruf.'
+      event.respond "Fehlerhafter Aufruf."
       return
     end
 
@@ -1600,21 +1578,20 @@ bot.command([:log], description: '', usage: '') do |event, *args|
     diary_set = DB[:diaries].where(iduser: user[:id]).reverse_order(:created).limit(anzahl)
     diary_set.each do |row|
       created = Time.at(row[:created].to_i)
-      event << "#{created.strftime('%d.%m.%y %H:%M')} #{row[:entry]}"
+      event << "#{created.strftime("%d.%m.%y %H:%M")} #{row[:entry]}"
     end
 
     if diary_set.empty?
-      event << 'Es gibt keine Einträge.'
-      event << 'Das ist ein bisschen traurig.'
+      event << "Es gibt keine Einträge."
+      event << "Das ist ein bisschen traurig."
     end
 
     return
 
-  # unbekannte option
+    # unbekannte option
   else
-    event.respond 'Unbekannte Option.'
+    event.respond "Unbekannte Option."
   end
-
 end
 
 def shut_down(b)
@@ -1623,7 +1600,7 @@ def shut_down(b)
   bot.stop
 end
 
-Signal.trap('INT') { 
+Signal.trap("INT") {
   shut_down(bot)
   exit
 }
