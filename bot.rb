@@ -967,7 +967,7 @@ bot.command([:ueber, :about], description: "Nennt Bot-Infos.") do |event, *args|
   seen(event)
 
   event << "v#{config["version"]} #{config["website"]}"
-  event << "#{DB[:users].count} Benutzer"
+  event << "#{DB[:users].count} Benutzer (#{DB[:users].where(enabled: true).count} aktiv/#{DB[:users].where(enabled: false).count} inaktiv)"
   event << "#{DB[:keywords].where(alias_id: nil, hidden: false).count} Begriffe und #{DB[:keywords].where(hidden: false).exclude(alias_id: nil).count} Aliase"
   event << "#{DB[:definitions].join(:keywords, :id => :idkeyword).where(hidden: false).count} Erklärungen"
 end
@@ -1120,7 +1120,7 @@ bot.command(:user, description: "Regelt Benutzer-Rechte. Nur Bot-Master.", usage
     dis_users = DB[:users].where(enabled: false).order(:name)
 
     unless en_users.empty?
-      event << "User:"
+      event << "__User:__"
       en_users.each do |user|
         botmaster = user[:botmaster] ? ", Botmaster" : ""
         event << user[:name] + botmaster
@@ -1128,7 +1128,7 @@ bot.command(:user, description: "Regelt Benutzer-Rechte. Nur Bot-Master.", usage
     end
 
     unless dis_users.empty?
-      event << "Inaktive:"
+      event << "__Inaktive:__"
       dis_users.each do |user|
         botmaster = user[:botmaster] ? ", Botmaster" : ""
         event << user[:name] + botmaster
