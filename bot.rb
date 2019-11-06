@@ -994,7 +994,7 @@ end
 # --list
 # Listet Bot-Benutzer auf.
 #
-bot.command(:user, description: "Regelt Benutzer-Rechte. Nur Bot-Master.", usage: "~user --list | --add  Discord-User [Botmaster] | ( --enable | --disable  | --botmaster Discord-User )") do |event, *args|
+bot.command([:benutzer, :user], description: "Regelt Benutzer-Rechte. Nur Bot-Master.", usage: "~benutzer --list | --add  Discord-User [Botmaster] | ( --enable | --disable  | --botmaster Discord-User )") do |event, *args|
   # sonderregel fuer ersten benutzer
   if DB[:users].first
     # sonst recht zum aufruf pruefen
@@ -1324,7 +1324,7 @@ end
 # Macht bestimmte Aktionen waehrend einer begrenzten Zeitspanne rueckgaengig
 # Nur Bot-User.
 #
-bot.command([:aufheben, :undo], description: "Kann Sachen rückgängig machen. Funktioniert für 30 s nach der Aktion.", usage: "~undo") do |event, *args|
+bot.command([:aufheben, :undo], description: "Kann Sachen rückgängig machen. Funktioniert für #{config["undo_timeout"]} s nach der Aktion.", usage: "~undo") do |event, *args|
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
