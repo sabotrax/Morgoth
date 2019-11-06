@@ -1578,12 +1578,44 @@ bot.command([:log], description: "", usage: "") do |event, *args|
     diary_set = DB[:diaries].where(iduser: user[:id]).reverse_order(:created).limit(anzahl)
     diary_set.each do |row|
       created = Time.at(row[:created].to_i)
-      event << "#{created.strftime("%d.%m.%y %H:%M")} #{row[:entry]}"
+      event << "#{row[:entry]} (#{created.strftime("%d.%m.%y %H:%M")})"
     end
 
     if diary_set.empty?
       event << "Es gibt keine Einträge."
       event << "Das ist ein bisschen traurig."
+    end
+
+    return
+
+    # --at
+  elsif cmd == "--at"
+    if targs.empty?
+      event.respond "Fehlerhafter Aufruf."
+      return
+    end
+    # jahr anhaengen
+    if targs[0] =~ /^\d\d?\.\d\d?\.$/
+      targs[0].concat(Date.today.strftime("%y"))
+    end
+    # datum pruefen
+    begin
+      date = DateTime.strptime(targs[0], "%d.%m.%y")
+    rescue ArgumentError => e
+      event.respond "Fehlerhafter Aufruf."
+      return
+    end
+
+    time = date.to_time
+    mitternacht = time.to_i
+    diary_set = DB[:diaries].where(iduser: user[:id], created: mitternacht..(mitternacht + 86399))
+    diary_set.each do |row|
+      created = Time.at(row[:created].to_i)
+      event << "#{row[:entry]} (#{created.strftime("%H:%M")})"
+    end
+
+    if diary_set.empty?
+      event << "Keine Einträge gefunden."
     end
 
     return
