@@ -21,7 +21,6 @@
 #
 
 require "discordrb"
-require "json"
 require "sequel"
 require "yaml"
 require "rufus/scheduler"
@@ -32,9 +31,9 @@ require "net/http"
 
 require_relative "helper"
 require_relative "ship"
+require_relative "config"
 
-cfile = File.read("config.json")
-config = JSON.parse(cfile)
+include Config
 
 DB = Sequel.connect("sqlite://db/bot.db")
 DB.create_table? :users do
@@ -93,7 +92,7 @@ DB.create_table? :diaries do
   Time :changed
 end
 
-bot = Discordrb::Commands::CommandBot.new token: config["bot_token"], client_id: config["bot_client_id"], prefix: config["bot_prefix"], help_command: [:hilfe, :help]
+bot = Discordrb::Commands::CommandBot.new token: get_bot_token, client_id: get_bot_client_id, prefix: get_bot_prefix, help_command: [:hilfe, :help]
 
 # Schreibt in die Begriffs-Datenbank.
 # Nur Bot-User.
@@ -115,6 +114,9 @@ bot = Discordrb::Commands::CommandBot.new token: config["bot_token"], client_id:
 # Pinnt Eintrag des Begriffs unter Angabe der Ziffer aus wasist.
 #
 bot.command([:merke, :define], description: "Trägt in die Begriffs-Datenbank ein.", usage: '~merke ( ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung | [ --alias Alias Begriff | --hidden | --primer Begriff ( true | false ) | --pin Begriff Klammer-Ziffer aus ~wasist ] )') do |event, *args|
+  # channel pruefen
+  return unless listening_here(event)
+
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
@@ -595,6 +597,9 @@ end
 # Durchsucht Definitionen nach Hashtag und gibt deren Begriffe aus.
 #
 bot.command([:wasist, :whatis], description: "Fragt die Begriffs-Datenbank ab.", usage: '~wasist ( [ --alles ] ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) | --bsuche Suchtext-mit-%-Wildcards | #Hashtag )') do |event, *args|
+  # channel pruefen
+  return unless listening_here(event)
+
   seen(event)
 
   cmd = args.shift if args[0] =~ /^--/
@@ -763,6 +768,9 @@ end
 # Setz gepinnten Eintrag des Begriffs zurueck.
 #
 bot.command([:vergiss, :undefine], description: "Löscht aus der Begriffs-Datenbank.", usage: '~vergiss ( ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Klammer-Ziffer aus ~wasist | ( --alias | --pin ) ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) )') do |event, *args|
+  # channel pruefen
+  return unless listening_here(event)
+
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
@@ -964,9 +972,12 @@ end
 # Jeder.
 #
 bot.command([:ueber, :about], description: "Nennt Bot-Infos.") do |event, *args|
+  # channel pruefen
+  return unless listening_here(event)
+
   seen(event)
 
-  event << "v#{config["version"]} #{config["website"]}"
+  event << "v#{get_version} #{get_website}"
   event << "#{DB[:users].count} Benutzer (#{DB[:users].where(enabled: true).count} aktiv/#{DB[:users].where(enabled: false).count} inaktiv)"
   event << "#{DB[:keywords].where(alias_id: nil, hidden: false).count} Begriffe und #{DB[:keywords].where(hidden: false).exclude(alias_id: nil).count} Aliase"
   event << "#{DB[:definitions].join(:keywords, :id => :idkeyword).where(hidden: false).count} Erklärungen"
@@ -995,6 +1006,9 @@ end
 # Listet Bot-Benutzer auf.
 #
 bot.command([:benutzer, :user], description: "Regelt Benutzer-Rechte. Nur Bot-Master.", usage: "~benutzer --list | --add  Discord-User [Botmaster] | ( --enable | --disable  | --botmaster Discord-User )") do |event, *args|
+  # channel pruefen
+  return unless listening_here(event)
+
   # sonderregel fuer ersten benutzer
   if DB[:users].first
     # sonst recht zum aufruf pruefen
@@ -1149,10 +1163,13 @@ end
 # Jeder.
 #
 bot.command([:neueste, :latest], description: "Zeigt die neuesten Einträge der Begriffs-Datenbank.", usage: "~neueste") do |event, *args|
+  # channel pruefen
+  return unless listening_here(event)
+
   seen(event)
 
-  definition_set = DB[:keywords].select(:name, Sequel[:definitions][:created]).join(:definitions, :idkeyword => :id).where(hidden: false).reverse_order(Sequel[:definitions][:created]).limit(config["show_latest"] + 50)
-  template_set = DB[:keywords].select(:name, Sequel[:templates][:created]).join(:templates, :idkeyword => :id).where(hidden: false).reverse_order(Sequel[:templates][:created]).limit(config["show_latest"] + 50)
+  definition_set = DB[:keywords].select(:name, Sequel[:definitions][:created]).join(:definitions, :idkeyword => :id).where(hidden: false).reverse_order(Sequel[:definitions][:created]).limit(get_show_latest + 50)
+  template_set = DB[:keywords].select(:name, Sequel[:templates][:created]).join(:templates, :idkeyword => :id).where(hidden: false).reverse_order(Sequel[:templates][:created]).limit(get_show_latest + 50)
   dataset = definition_set.all + template_set.all
   sdataset = dataset.sort_by { |row| row[:created] }.reverse
 
@@ -1167,7 +1184,7 @@ bot.command([:neueste, :latest], description: "Zeigt die neuesten Einträge der 
   # doppelte keywords aussortieren
   seen_keywords = []
   sdataset.each do |entry|
-    break if seen_keywords.size == config["show_latest"]
+    break if seen_keywords.size == get_show_latest
     if seen_keywords.include? entry[:name]
       next
     else
@@ -1189,6 +1206,9 @@ end
 # Standard ist 1d6.
 #
 bot.command([:wuerfeln, :roll], description: "Würfelt bis 9d999.", usage: "~wuerfeln [ 1 - 9 ( d | w ) 1 - 999 ]") do |event, *args|
+  # channel pruefen
+  return unless listening_here(event)
+
   seen(event)
 
   args.push "1d6" unless args.any?
@@ -1215,6 +1235,9 @@ end
 # Jeder.
 #
 bot.command([:zufaellig, :random, :rnd], description: "Zeigt einen zufälligen Begriff.", usage: "~zufaellig") do |event, *args|
+  # channel pruefen
+  return unless listening_here(event)
+
   seen(event)
 
   db_keyword = DB[:keywords].where(hidden: false).order(Sequel.lit("RANDOM()")).first
@@ -1234,6 +1257,9 @@ end
 # Stellt die Datenbank zeitlich begrenzt zum Download bereit.
 #
 bot.command([:datenbank, :database, :db], description: "Datenbank-Verwaltung. Nur Bot-Master.", usage: "~datenbank --export") do |event, *args|
+  # channel pruefen
+  return unless listening_here(event)
+
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
   unless user
@@ -1248,7 +1274,7 @@ bot.command([:datenbank, :database, :db], description: "Datenbank-Verwaltung. Nu
   targs = tokenize(args)
 
   if cmd == "--export"
-    uri = URI("http://#{config["dl_hostname"]}:#{config["dl_host_port"]}")
+    uri = URI("http://#{get_dl_hostname}:#{get_dl_host_port}")
     begin
       res = Net::HTTP.get_response(uri)
     rescue
@@ -1269,7 +1295,7 @@ bot.command([:datenbank, :database, :db], description: "Datenbank-Verwaltung. Nu
     # webserver
     server = Adsf::Server.new(host: "0.0.0.0", root: "public")
 
-    event.respond "SQLite-Datenbank für 60 s verfügbar http://#{config["dl_hostname"]}:#{config["dl_host_port"]}/#{zfilename}"
+    event.respond "SQLite-Datenbank für 60 s verfügbar http://#{get_dl_hostname}:#{get_dl_host_port}/#{zfilename}"
 
     # timer
     scheduler = Rufus::Scheduler.new
@@ -1291,6 +1317,9 @@ end
 # Jeder.
 #
 bot.command([:tagszeigen, :showtags], description: "Zeigt alle Hashtags.", usage: "~tagszeigen") do |event, *args|
+  # channel pruefen
+  return unless listening_here(event)
+
   seen(event)
 
   definition_set = DB[:definitions].where(Sequel.ilike(:definition, "%#%")).map(:definition)
@@ -1324,7 +1353,10 @@ end
 # Macht bestimmte Aktionen waehrend einer begrenzten Zeitspanne rueckgaengig
 # Nur Bot-User.
 #
-bot.command([:aufheben, :undo], description: "Kann Sachen rückgängig machen. Funktioniert für #{config["undo_timeout"]} s nach der Aktion.", usage: "~undo") do |event, *args|
+bot.command([:aufheben, :undo], description: "Kann Sachen rückgängig machen. Funktioniert für #{get_undo_timeout} s nach der Aktion.", usage: "~undo") do |event, *args|
+  # channel pruefen
+  return unless listening_here(event)
+
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
@@ -1348,7 +1380,7 @@ bot.command([:aufheben, :undo], description: "Kann Sachen rückgängig machen. F
 
   # zeit ueberschritten
   now = Time.now.to_i
-  unless now - db_action[:created].to_i < config["undo_timeout"]
+  unless now - db_action[:created].to_i < get_undo_timeout
     event.respond "Das geht nicht mehr."
     return
   end
@@ -1532,6 +1564,9 @@ bot.command([:aufheben, :undo], description: "Kann Sachen rückgängig machen. F
 end
 
 bot.command([:log], description: "", usage: "") do |event, *args|
+  # channel pruefen
+  return unless listening_here(event)
+
   # recht zum aufruf pruefen
   user = DB[:users].where(discord_id: event.user.id, enabled: true).first
   unless user
@@ -1619,6 +1654,42 @@ bot.command([:log], description: "", usage: "") do |event, *args|
     end
 
     return
+
+    # unbekannte option
+  else
+    event.respond "Unbekannte Option."
+  end
+end
+
+
+# Bot-Verwaltung
+# Nur Bot-Master.
+#
+# --info
+# Gibt verschiedene Informationen aus
+#
+bot.command([:bot], description: "", usage: "") do |event, *args|
+  # channel pruefen
+  return unless listening_here(event)
+
+  # recht zum aufruf pruefen
+  user = DB[:users].where(discord_id: event.user.id, botmaster: true, enabled: true).first
+  unless user
+    event.respond "Nur Bot-Master dürfen das!"
+    return
+  end
+
+  seen(event, user)
+
+  cmd = args.shift
+
+  targs = tokenize(args)
+
+  if cmd == "--info"
+    event << "Autor: " + event.author.name
+    event << "Kanal: " + event.channel.name
+    event << "Kanal-ID: " + event.channel.id.to_s
+    event << "Hört hier zu: " + listening_here(event).to_s
 
     # unbekannte option
   else

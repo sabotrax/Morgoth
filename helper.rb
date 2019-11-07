@@ -78,5 +78,15 @@ def seen(event, user = nil)
   end
 end
 
+# Prueft, ob der Bot in diesem Channel zuhoert
+# Auf PMs wird immer geantwortet
+def listening_here(event)
+  if get_listening_channels.include?(event.channel.name) or event.channel.name == event.user.name
+    return true
+  else
+    return false
+  end
+end
+
 class TemplateArgumentError < ArgumentError
 end
