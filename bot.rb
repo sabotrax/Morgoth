@@ -686,6 +686,11 @@ bot.command([:wasist, :whatis], description: "Fragt die Begriffs-Datenbank ab.",
       end
     end
 
+    # --primer zeigen
+    if cmd and db_keyword[:primer]
+      event << "Begriff ist Primer."
+    end
+
     # aliase fuer --alles holen
     alias_set = DB.fetch('SELECT `keywords`.*, `users`.`name` AS \'username\' FROM `keywords` INNER JOIN `users` ON (`users`.`id` = `keywords`.`iduser`) WHERE (`keywords`.`alias_id` = ?)', db_keyword[:alias_id] ? db_keyword[:alias_id] : db_keyword[:id]).map { |row| "#{row[:name]} (#{row[:username]} #{Time.at(row[:created].to_i).strftime("%H:%M %d.%m.%y")})" }
     if cmd and alias_set.any?

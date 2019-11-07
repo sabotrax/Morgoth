@@ -21,7 +21,7 @@
 #
 
 class Ship
-  @@config = {
+  @@ship = {
     length: {
       name: "Länge",
       short_name: "^(?:länge|laenge|lang)$",
@@ -99,14 +99,14 @@ class Ship
     turrets: {
       name: "Türme",
       short_name: "^(?:türme|tuerme|turrets)$",
-      type: '[1-9]\d? (?:S|s)[1-9]\d?(?: (?:à|a|je|je zu|zu je) [1-9]\d?)?',
+      type: '[1-9]\d? (?:S)[1-9]\d?(?: (?:à|a|je|je zu|zu je) [1-9]\d?)?',
       err_msg: 'Türme so angeben: "4 S3", "5 S2 à 2" oder "2 S3 2 S1".',
       source: :local,
     },
     missiles: {
       name: "Raketen",
       short_name: "^(?:raketen|torpedos|missiles)$",
-      type: '[1-9]\d? (?:S|s)[1-9]\d?(?: (?:à|a|je|je zu|zu je) [1-9]\d?)?',
+      type: '[1-9]\d? (?:S)[1-9]\d?(?: (?:à|a|je|je zu|zu je) [1-9]\d?)?',
       err_msg: 'Raketen so angeben: "4 S3", "3 S3 à 8" oder "2 S3 2 S1".',
       source: :local,
     },
@@ -200,8 +200,8 @@ class Ship
   end
 
   def length(l)
-    unless l.to_s =~ /#{@@config[:length][:type]}/
-      raise ArgumentError, @@config[:length][:err_msg]
+    unless l.to_s =~ /#{@@ship[:length][:type]}/
+      raise ArgumentError, @@ship[:length][:err_msg]
     end
 
     @length[:value] = l
@@ -212,8 +212,8 @@ class Ship
   end
 
   def beam(b)
-    unless b.to_s =~ /#{@@config[:beam][:type]}/
-      raise ArgumentError, @@config[:beam][:err_msg]
+    unless b.to_s =~ /#{@@ship[:beam][:type]}/
+      raise ArgumentError, @@ship[:beam][:err_msg]
     end
 
     @beam[:value] = b
@@ -224,8 +224,8 @@ class Ship
   end
 
   def height(h)
-    unless h.to_s =~ /#{@@config[:height][:type]}/
-      raise ArgumentError, @@config[:height][:err_msg]
+    unless h.to_s =~ /#{@@ship[:height][:type]}/
+      raise ArgumentError, @@ship[:height][:err_msg]
     end
 
     @height[:value] = h
@@ -236,8 +236,8 @@ class Ship
   end
 
   def mass(m)
-    unless m.to_s =~ /#{@@config[:mass][:type]}/
-      raise ArgumentError, @@config[:mass][:err_msg]
+    unless m.to_s =~ /#{@@ship[:mass][:type]}/
+      raise ArgumentError, @@ship[:mass][:err_msg]
     end
 
     @mass[:value] = m
@@ -248,8 +248,8 @@ class Ship
   end
 
   def size(s)
-    unless s.to_s =~ /#{@@config[:size][:type]}/
-      raise ArgumentError, @@config[:size][:err_msg]
+    unless s.to_s =~ /#{@@ship[:size][:type]}/
+      raise ArgumentError, @@ship[:size][:err_msg]
     end
 
     @size[:value] = s.capitalize
@@ -260,8 +260,8 @@ class Ship
   end
 
   def min_crew(c)
-    unless c.to_s =~ /#{@@config[:min_crew][:type]}/
-      raise ArgumentError, @@config[:min_crew][:err_msg]
+    unless c.to_s =~ /#{@@ship[:min_crew][:type]}/
+      raise ArgumentError, @@ship[:min_crew][:err_msg]
     end
 
     @min_crew[:value] = c
@@ -272,8 +272,8 @@ class Ship
   end
 
   def max_crew(c)
-    unless c.to_s =~ /#{@@config[:max_crew][:type]}/
-      raise ArgumentError, @@config[:max_crew][:err_msg]
+    unless c.to_s =~ /#{@@ship[:max_crew][:type]}/
+      raise ArgumentError, @@ship[:max_crew][:err_msg]
     end
 
     @max_crew[:value] = c
@@ -284,8 +284,8 @@ class Ship
   end
 
   def cargo(c)
-    unless c.to_s =~ /#{@@config[:cargo][:type]}/
-      raise ArgumentError, @@config[:cargo][:err_msg]
+    unless c.to_s =~ /#{@@ship[:cargo][:type]}/
+      raise ArgumentError, @@ship[:cargo][:err_msg]
     end
 
     @cargo[:value] = c
@@ -296,8 +296,8 @@ class Ship
   end
 
   def scm_speed(s)
-    unless s.to_s =~ /#{@@config[:scm_speed][:type]}/
-      raise ArgumentError, @@config[:scm_speed][:err_msg]
+    unless s.to_s =~ /#{@@ship[:scm_speed][:type]}/
+      raise ArgumentError, @@ship[:scm_speed][:err_msg]
     end
 
     @scm_speed[:value] = s
@@ -308,8 +308,8 @@ class Ship
   end
 
   def ab_speed(s)
-    unless s.to_s =~ /#{@@config[:ab_speed][:type]}/
-      raise ArgumentError, @@config[:ab_speed][:err_msg]
+    unless s.to_s =~ /#{@@ship[:ab_speed][:type]}/
+      raise ArgumentError, @@ship[:ab_speed][:err_msg]
     end
 
     @ab_speed[:value] = s
@@ -320,8 +320,8 @@ class Ship
   end
 
   def weapons(w)
-    unless w.to_s =~ /#{@@config[:weapons][:type]}/
-      raise ArgumentError, @@config[:weapons][:err_msg]
+    unless w.to_s =~ /#{@@ship[:weapons][:type]}/
+      raise ArgumentError, @@ship[:weapons][:err_msg]
     end
 
     @weapons[:value] = w
@@ -332,11 +332,11 @@ class Ship
   end
 
   def turrets(t)
-    tgroups = t.split(/(#{@@config[:turrets][:type]})/)
+    tgroups = t.split(/(#{@@ship[:turrets][:type]})/)
     tgroups.each do |g|
       next if g.to_s =~ /^(\s|\t)?$/
-      unless g.to_s =~ /#{@@config[:turrets][:type]}/
-        raise ArgumentError, @@config[:turrets][:err_msg]
+      unless g.to_s =~ /#{@@ship[:turrets][:type]}/
+        raise ArgumentError, @@ship[:turrets][:err_msg]
       end
     end
 
@@ -351,11 +351,11 @@ class Ship
   end
 
   def missiles(m)
-    mgroups = m.split(/(#{@@config[:missiles][:type]})/)
+    mgroups = m.split(/(#{@@ship[:missiles][:type]})/)
     mgroups.each do |g|
       next if g.to_s =~ /^(\s|\t)?$/
-      unless g.to_s =~ /#{@@config[:missiles][:type]}/
-        raise ArgumentError, @@config[:missiles][:err_msg]
+      unless g.to_s =~ /#{@@ship[:missiles][:type]}/
+        raise ArgumentError, @@ship[:missiles][:err_msg]
       end
     end
 
@@ -370,8 +370,8 @@ class Ship
   end
 
   def utility_items(i)
-    unless i.to_s =~ /#{@@config[:utility_items][:type]}/
-      raise ArgumentError, @@config[:utility_items][:err_msg]
+    unless i.to_s =~ /#{@@ship[:utility_items][:type]}/
+      raise ArgumentError, @@ship[:utility_items][:err_msg]
     end
 
     @utility_items[:value] = i
@@ -396,7 +396,7 @@ class Ship
     self.instance_variables.each do |iv|
       iv_literal = iv.to_s.tr("@", "")
       targs.each { |token| token.delete! '"' }
-      if @@config.has_key?(iv_literal.to_sym) and targs[0] =~ /#{@@config[iv_literal.to_sym][:short_name]}/i
+      if @@ship.has_key?(iv_literal.to_sym) and targs[0] =~ /#{@@ship[iv_literal.to_sym][:short_name]}/i
         raise ArgumentError, "Fehlerhafter Aufruf." unless targs[1]
         self.send iv_literal, targs[1]
         attribute = true
