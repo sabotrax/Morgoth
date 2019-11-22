@@ -111,7 +111,7 @@ bot = Discordrb::Commands::CommandBot.new token: get_bot_token, client_id: get_b
 # Fuegt Begriff zur Liste hinzu bzw. entfernt davon, die Benutzern beim ersten Aufruf des Bots angezeigt werden.
 #
 # --pin Begriff Ziffer
-# Pinnt Eintrag des Begriffs unter Angabe der Ziffer aus wasist.
+# Pinnt Eintrag des Begriffs unter Angabe der Ziffer aus ~wasist.
 #
 bot.command([:merke, :define], description: "Trägt in die Begriffs-Datenbank ein.", usage: '~merke ( ( Begriff | Doppel-Begriff | "Ein erweiterter Begriff" ) Text der Erklärung | [ --alias Alias Begriff | --hidden | --primer Begriff ( true | false ) | --pin Begriff Klammer-Ziffer aus ~wasist ] )') do |event, *args|
   # channel pruefen
@@ -1568,7 +1568,19 @@ bot.command([:aufheben, :undo], description: "Kann Sachen rückgängig machen. F
   event.respond "Erledigt."
 end
 
-bot.command([:log], description: "", usage: "") do |event, *args|
+# Schreibt in das private Log des Benutzers
+# Nur Bot-User.
+#
+# Eintrag
+# Speichert Eintrag
+#
+# --latest [1-99] (Standard 5)
+# Zeigt die letzten Eintraege an.
+#
+# --at TT.MM.[JJ]
+# Zeigt die Eintraege dieses Datums.
+# Wird das Jahr weggelassen, so wird das aktuelle angenommen.
+bot.command([:log], description: "", usage: "", help_available: false) do |event, *args|
   # channel pruefen
   return unless listening_here(event)
 
@@ -1605,8 +1617,8 @@ bot.command([:log], description: "", usage: "") do |event, *args|
 
     event.respond "Erledigt."
 
-    # --last
-  elsif cmd == "--last"
+    # --latest
+  elsif cmd == "--latest"
     if targs.size > 0 and targs[0] !~ /^[1-9]\d?$/i
       event.respond "Fehlerhafter Aufruf."
       return
@@ -1666,12 +1678,11 @@ bot.command([:log], description: "", usage: "") do |event, *args|
   end
 end
 
-
 # Bot-Verwaltung
 # Nur Bot-Master.
 #
 # --info
-# Gibt verschiedene Informationen aus
+# Gibt verschiedene Informationen aus.
 #
 bot.command([:bot], description: "", usage: "") do |event, *args|
   # channel pruefen
