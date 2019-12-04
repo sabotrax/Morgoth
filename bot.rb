@@ -1580,7 +1580,11 @@ end
 # --at TT.MM.[JJ]
 # Zeigt die Eintraege dieses Datums.
 # Wird das Jahr weggelassen, so wird das aktuelle angenommen.
-bot.command([:log], description: "", usage: "", help_available: false) do |event, *args|
+#
+# --show-tags
+# Zeigt alle Hashtags.
+#
+bot.command([:log], description: "Privates Tagebuch (nicht wirklich privat)", usage: "~log ( Macht einen Eintrag | [--latest [1-99] ] | [--at TT.MM.[YY] ] | --show-tags )") do |event, *args|
   # channel pruefen
   return unless listening_here(event)
 
@@ -1672,6 +1676,33 @@ bot.command([:log], description: "", usage: "", help_available: false) do |event
 
     return
 
+    # --show-tags
+  elsif cmd == "--show-tags"
+    diary_set = DB[:diaries].where(Sequel.ilike(:entry, "%#%")).map(:entry)
+
+    unless diary_set.any?
+      event << "Keine Hashtags gefunden."
+      return
+    else
+      event << "**Alle Hashtags:**"
+    end
+
+    seen_tags = []
+    diary_set.each do |entry|
+      entry.scan(/(?:^|\s+)(#[[:alnum:]]+)/).flatten.each do |e|
+        e.downcase!
+        if seen_tags.include? e
+          next
+        else
+          seen_tags.push(e) if e =~ /#[[:alnum:]]+/
+        end
+      end
+    end
+
+    # ausgeben
+    formatter(seen_tags.sort).each { |line| event << line }
+
+    return
     # unbekannte option
   else
     event.respond "Unbekannte Option."
