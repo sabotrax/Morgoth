@@ -88,5 +88,23 @@ def listening_here(event)
   end
 end
 
+# Trennt Antworten in n-lange Bloecke auf und gibt sie aus
+# Sollte benutzt werden, wenn laengere Antworten zu erwarten sind
+#
+def split_respond(event, respond)
+  split_respond = []
+  part_length = 0
+  respond.each do |line|
+    if part_length + line.length >= 1999
+      event.respond split_respond.join("\n")
+      split_respond = []
+      part_length = 0
+    end
+    split_respond.push(line)
+    part_length += line.length
+  end
+  event.respond split_respond.join("\n")
+end
+
 class TemplateArgumentError < ArgumentError
 end

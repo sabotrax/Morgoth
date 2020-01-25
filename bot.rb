@@ -616,6 +616,8 @@ bot.command([:wasist, :whatis], description: "Fragt die Begriffs-Datenbank ab.",
     return
   end
 
+  answer = []
+
   if keyword =~ /^#/
     keyword_set = DB[:keywords].select(:name, :definition).join(:definitions, :idkeyword => :id).where(Sequel.ilike(Sequel[:definitions][:definition], "%#{keyword}%")).where(hidden: false).order(:name)
 
@@ -672,31 +674,31 @@ bot.command([:wasist, :whatis], description: "Fragt die Begriffs-Datenbank ab.",
     # bei alias auch original zeigen
     if db_orig_keyword
       if cmd.nil?
-        event << "**#{db_keyword[:name]} (#{db_orig_keyword[:name]}):**"
+        answer << "**#{db_keyword[:name]} (#{db_orig_keyword[:name]}):**"
       else
         created = Time.at(db_orig_keyword[:created].to_i)
-        event << "**#{db_keyword[:name]} (#{db_orig_keyword[:name]})** #{db_orig_keyword[:username]} #{created.strftime("%H:%M %d.%m.%y")}:"
+        answer << "**#{db_keyword[:name]} (#{db_orig_keyword[:name]})** #{db_orig_keyword[:username]} #{created.strftime("%H:%M %d.%m.%y")}:"
       end
     else
       if cmd.nil?
-        event << "**#{db_keyword[:name]}:**"
+        answer << "**#{db_keyword[:name]}:**"
       else
         created = Time.at(db_keyword[:created].to_i)
-        event << "**#{db_keyword[:name]}** #{db_keyword[:username]} #{created.strftime("%H:%M %d.%m.%y")}:"
+        answer << "**#{db_keyword[:name]}** #{db_keyword[:username]} #{created.strftime("%H:%M %d.%m.%y")}:"
       end
     end
 
     # --primer zeigen
-    if cmd and db_keyword[:primer]
-      event << "Begriff ist Primer."
+    if cmd and ( db_keyword[:primer] or db_orig_keyword[:primer] )
+      answer << "Begriff ist Primer."
     end
 
     # aliase fuer --alles holen
     alias_set = DB.fetch('SELECT `keywords`.*, `users`.`name` AS \'username\' FROM `keywords` INNER JOIN `users` ON (`users`.`id` = `keywords`.`iduser`) WHERE (`keywords`.`alias_id` = ?)', db_keyword[:alias_id] ? db_keyword[:alias_id] : db_keyword[:id]).map { |row| "#{row[:name]} (#{row[:username]} #{Time.at(row[:created].to_i).strftime("%H:%M %d.%m.%y")})" }
     if cmd and alias_set.any?
-      event << "Alias(e):"
-      formatter(alias_set).each { |line| event << line }
-      event << "Erläuterung(en):"
+      answer << "Alias(e):"
+      formatter(alias_set).each { |line| answer.push line }
+      answer << "Erläuterung(en):"
     end
 
     # hinweis
@@ -704,21 +706,24 @@ bot.command([:wasist, :whatis], description: "Fragt die Begriffs-Datenbank ab.",
     template_set = DB[:templates].where(idkeyword: (db_keyword[:alias_id] || db_keyword[:id]))
     template_set.each do |template|
       object = YAML::load template[:object]
-      event << object.formatter
+      answer << object.formatter
     end
 
     i = 0
     if cmd.nil?
       definition_set.each do |definition|
-        event << "#{definition[:definition]} (#{i += 1})"
+        answer << "#{definition[:definition]} (#{i += 1})"
       end
     else
       definition_set.each do |definition|
         created = Time.at(definition[:created].to_i)
         pinned = "(gepinnt) " if definition[:pinned]
-        event << "#{definition[:definition]} #{pinned}(#{definition[:username]} #{created.strftime("%H:%M %d.%m.%y")}) (#{i += 1})"
+        answer << "#{definition[:definition]} #{pinned}(#{definition[:username]} #{created.strftime("%H:%M %d.%m.%y")}) (#{i += 1})"
       end
     end
+
+    split_respond(event, answer)
+
   elsif cmd == "--bsuche" or cmd == "--ksearch"
     if keyword.length < 3
       event.respond "Suchbegriff zu kurz. Drei Zeichen bitte."
@@ -750,7 +755,8 @@ bot.command([:wasist, :whatis], description: "Fragt die Begriffs-Datenbank ab.",
     end
 
     # ausgeben
-    formatter(kw_names).each { |line| event.respond line }
+    formatter(kw_names).each { |line| answer.push line }
+    split_respond(event, answer)
 
     # unbekannte option
   else
@@ -1032,6 +1038,8 @@ bot.command([:benutzer, :user], description: "Regelt Benutzer-Rechte. Nur Bot-Ma
 
   targs = tokenize(args)
 
+  answer = []
+
   # add
   if cmd == "--add"
     duser = targs.shift || ""
@@ -1139,24 +1147,26 @@ bot.command([:benutzer, :user], description: "Regelt Benutzer-Rechte. Nur Bot-Ma
     dis_users = DB[:users].where(enabled: false).order(:name)
 
     unless en_users.empty?
-      event << "__User:__"
+      answer << "__User:__"
       en_users.each do |user|
         botmaster = user[:botmaster] ? ", Botmaster" : ""
-        event << user[:name] + botmaster
+        answer << user[:name] + botmaster
       end
     end
 
     unless dis_users.empty?
-      event << "__Inaktive:__"
+      answer << "__Inaktive:__"
       dis_users.each do |user|
         botmaster = user[:botmaster] ? ", Botmaster" : ""
-        event << user[:name] + botmaster
+        answer << user[:name] + botmaster
       end
     end
 
     if en_users.empty? and dis_users.empty?
-      event << "Keine User."
+      answer << "Keine User."
     end
+
+    split_respond(event, answer)
 
     # unbekannte option
   else
@@ -1329,7 +1339,9 @@ bot.command([:tagszeigen, :showtags], description: "Zeigt alle Hashtags.", usage
 
   definition_set = DB[:definitions].where(Sequel.ilike(:definition, "%#%")).map(:definition)
 
-  event << "**Alle Hashtags:**"
+  answer = []
+
+  event.respond "**Alle Hashtags:**"
 
   unless definition_set.any?
     event << "Keine."
@@ -1350,7 +1362,8 @@ bot.command([:tagszeigen, :showtags], description: "Zeigt alle Hashtags.", usage
   end
 
   # ausgeben
-  formatter(seen_tags.sort).each { |line| event << line }
+  formatter(seen_tags.sort).each { |line| answer.push line }
+  split_respond(event, answer)
 
   return
 end
